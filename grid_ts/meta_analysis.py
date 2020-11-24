@@ -19,10 +19,10 @@ H0_list = os.listdir(f'{cwd}/../roi_simulation/loglikes')
 # print(H0_list)
 H0 = np.zeros((len(H0_list)))
 for c, v in enumerate(H0_list):
-    H0[c] = np.loadtxt(v)
+    H0[c] = np.loadtxt(f'{cwd}/../roi_simulation/loglikes/{v}')
 
 print(H0)
-np.savetxt('~/H0_loglikes.dat', H0)
+np.savetxt('H0_loglikes.dat', H0)
 
 fig_1 = plt.figure(1)    # loglike H0 figure
 ax_1 = fig_1.add_subplot(111)
