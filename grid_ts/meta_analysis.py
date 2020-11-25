@@ -5,12 +5,16 @@ import matplotlib.pyplot as plt
 import os
 import sys
 from matplotlib import rc
+from scipy.stats import ncx2
+from scipy.optimize import curve_fit
 
 rc('font', **{'family': 'serif', 'serif': ['Computer Modern']})
 rc('text', usetex=True)
 '''Script to do binning and analysis of highest (?) TS value per pseudo experiment (PE).
 '''
 data_H0 = -421745.9637820099
+def fit_func(x, df, nc):
+    return ncx2.pdf(x, df, nc)
 
 # Maybe do "running" analysis as data comes in
 # Check for folders with full ts_95 coverage
@@ -40,3 +44,12 @@ ax_1.legend()
 fig_2 = plt.figure(2, dpi=150)
 ax_2 = fig_2.add_subplot(111)
 ax_2.set_title('Distribution of largest TS per PE')
+ts_max_values = np.loadtxt('ts_max_values.dat')
+n_2, bins_2, patches_2 = ax_2.hist(ts_max_values, bins=20, label='max ts values per PE')
+ax_2.legend()
+delta_x = bins_2[1] - bins_2[0]
+x = np.linspace(bins_2[0] + delta_x / 2, bins_2[-1] - delta_x / 2, num = len(n_2), endpoint=True)
+n_2[0] = 0
+print(x, n_2)
+popt, pcov = curve_fit(fit_func, x, n_2)
+
