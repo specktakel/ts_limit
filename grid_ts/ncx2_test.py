@@ -12,8 +12,8 @@ from scipy.stats import rv_histogram
 import matplotlib.pyplot as plt
 from matplotlib.ticker import (MultipleLocator, AutoMinorLocator)
 from matplotlib import rc
-#rc('font', **{'family': 'serif', 'serif': ['Computer Modern']})
-#rc('text', usetex=True)
+rc('font', **{'family': 'serif', 'serif': ['Computer Modern']})
+rc('text', usetex=True)
 nbins = 30
 np.random.seed(420)
 fig = plt.figure(1, dpi=150)
@@ -90,8 +90,8 @@ cl_95_dat = data_rv.ppf(0.954)
 cl_99_dat = data_rv.ppf(0.997)
 ax_cdf.plot((cl_95_dat, cl_95_dat), (0, 1), c='yellow', linestyle='-.', linewidth=0.5)
 ax_cdf.text(cl_95_dat, 0.4, '$2\sigma$', rotation=90)
-ax_cdf.plot((cl_99_dat, cl_99_dat), (0, 1), c='yellow', linestyle='--', linewidth=0.5)
+ax_cdf.plot((cl_99_dat, cl_99_dat), (0, 1), c='yellow', linestyle='--', linewidth=0.5, label='from data')
 ax_cdf.text(cl_99_dat, 0.4, '$3\sigma$', rotation=90)
 
-
-ax.legend()
+ax_cdf.legend(loc='upper right')
+ax.legend(loc='upper left')
