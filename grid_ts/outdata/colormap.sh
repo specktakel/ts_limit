@@ -2,7 +2,8 @@
 
 # script to get python to do some colormaps
 SUBDIR=ts_95
-for i in {49..70}
+declare -a incomplete
+for i in {49..80}
 do
   files=($(ls roi_"$i"/"$SUBDIR"))
   # echo $files
@@ -15,12 +16,16 @@ do
       echo "dir with index $i has all data"
       echo "invoking script with arg $i"
       python loglike_mac.py "$i"
-    else
+    elif [ $num_of_files -gt 0 ]
+    then
       echo "data not all done"
+      incomplete+=($i)
+    else
+       echo "ROI not touched yet"
     fi
   else
     echo "png is already done"
   fi
 
-
+printf "%s\n" "${incomplete[@]}" > ../to_be_submitted.txt
 done
