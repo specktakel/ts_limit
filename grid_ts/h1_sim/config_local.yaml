@@ -1,0 +1,33 @@
+data: 
+  evfile: 'events.lst'
+binning:
+  roiwidth: 10.0
+  binsz: 0.2
+  binsperdec: 30
+
+selection:
+  emin: 100
+  emax: 500000
+  zmax: 90
+  evclass: 128
+  evtype: 3
+  tmin    : 239557417
+  tmax    : 621322123
+  filter: DATA_QUAL>0 && LAT_CONFIG==1
+  target: 4FGL J0319.8+4130
+
+gtlike:
+  edisp: True
+  edisp_bins: -6
+  irfs: 'P8R3_SOURCE_V3'
+  edisp_disable: ['isodiff']
+
+model:
+  src_radius: 15.0
+  catalogs: ['gll_psc_v21.xml']
+
+logging:
+  verbosity: 4
+
+fileio:
+  logfile: 'fermipy.log'
