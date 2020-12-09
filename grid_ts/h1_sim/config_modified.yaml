@@ -4,7 +4,6 @@ binning:
   roiwidth: 10.0
 data:
   evfile: events.lst
-  scfile: /nfs/astrop/n1/kuhlmann/NGC_1275/raw_data_roi_15/L2009090432059398E3A906_SC00.fits
   ltcube: /nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/grid_ts/h1_sim/fits/ltcube_00.fits
 fileio:
   logfile: /nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/grid_ts/h1_sim/fits/fermipy.log
