@@ -16,8 +16,7 @@ from shutil import copytree
 
 path_to_conda = os.environ['CONDA_PREFIX']
 cwd = os.getcwd()
-# %matplotlib inline
-# input_arg = sys.argv[1]    # is a string type
+
 input_roi = int(sys.argv[1])    # use this to find correct g, m
 input_gm = int(sys.argv[2])
 
@@ -25,15 +24,6 @@ input_gm = int(sys.argv[2])
 '''Set up roi/parameters space'''
 num_ROI = 100
 nsim = 100
-'''
-sim = np.linspace(0, num_ROI, num=num_ROI, endpoint=False, dtype=int)
-grid = np.linspace(0, 900, num=900, endpoint=False, dtype=int)
-index = np.zeros((sim.shape[0], grid.shape[0], 2), dtype=int)
-for i in range(sim.shape[0]):
-    for j in range(grid.shape[0]):
-        index[i, j, :] = sim[i], grid[j]
-index = index.reshape((sim.shape[0] * grid.shape[0], 2))
-'''
 which_roi = input_roi    # index[input_gm, 0]
 which_gm = input_gm      # index[input_gm, 1]
 print(f'roi number: {which_roi}, gm number: {which_gm}')
@@ -72,6 +62,7 @@ print('m:', m)
 prob_path = f'/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/grid_survival_prob/probs/prob{which_gm:03}.dat'
 loglike_path = f'/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/grid_ts/outdata/roi_{which_roi}/all_data'
 roi_file = f'{roi_path}/roi_{which_roi}.npy'
+
 try:
     os.mkdir(loglike_path)
     print(f'created output path: {loglike_path}')
@@ -84,7 +75,10 @@ except FileExistsError:
 
 print(f'cwd: {cwd}')
 
-''' Do stuff with the yaml config here:'''
+''' Do stuff with the yaml config here.
+Set workdir and outdir s.t. this will run on the cluster with copied fits directory.
+Somehow I managed to forget to include the SC file in this. Will run either way identically (I hope, needs testing tho)
+'''
 
 with open(cwd+'/config_local.yaml', 'r') as i:
     config = yaml.safe_load(i)
@@ -97,10 +91,14 @@ config['model']['galdiff'] = path_to_conda+'/share/fermitools/refdata/fermi/gald
 config['model']['isodiff'] = path_to_conda+'/share/fermitools/refdata/fermi/galdiffuse/iso_P8R3_SOURCE_V3_v1.txt'
 config['logging']['verbosity'] = 4
 source = config['selection']['target']
+
 with open(cwd+'/config_modified.yaml', 'w') as o:
     yaml.dump(config, o)
 
 # print(os.listdir(cwd))
+
+
+
 '''class definition'''
 class janitor:
     '''Because janitors do the work.
@@ -148,6 +146,8 @@ class janitor:
     def propagation(self, EGeV, m=1., g=1., B0=10., seed=None, nsim=1):
         '''Runs the propagation in magnetic fields, copied from me-manu, NGC1257 example notebook.
         Returns: Probabilities of finding photon (transversal1, 2) and ALP.
+        Currently not used. Rather use read_probs() to use pre-computed probabilities saving time and thus
+        being able to run on standard BIRD-computation slots.
         '''
 	
         alp = ALP(m, g)
@@ -191,6 +191,7 @@ class janitor:
     def fit_routine(self):
         '''Does fitting routine for GTAnalysis instances.
         Returns: dictionary of self.gta.fit()
+        Currently not used, rather load already fitted ROIs since these are re-used 900 times.
         '''
 
         self.gta.free_sources(free=False)
@@ -282,38 +283,9 @@ print(f'is roi_file a valid path?', os.path.isfile(roi_file))
 
 gta = GTAnalysis.create(roi_file, config=cwd+'/config_modified.yaml')
 
-'''
-gta = GTAnalysis('config_local.yaml', logging={'verbosity' : 4},\
-model={'galdiff': path_to_conda+'/share/fermitools/refdata/fermi/galdiffuse/gll_iem_v07.fits', \
-'isodiff': path_to_conda+'/share/fermitools/refdata/fermi/galdiffuse/iso_P8R3_SOURCE_V2_v1.txt'},\
-data={'ltcube': cwd+'/fits/ltcube_00.fits'}, fileio={'workdir': cwd+'/fits', 'outdir': cwd,\
-'logfile': cwd+'/fermipy.log'})
-gta.setup()
-dloglike=1
-loglike=1
-i=0
-while dloglike > 1e-5:
-    print('optimizing...')
-    o = gta.optimize()
-    dloglike = o['dloglike'] / o['loglike0'] 
-    i += 1
-    if i >=10:
-        print('10th iteration, will stop now') 
-        break
-gta.free_sources(free=False)
-gta.free_sources(distance=3.0, pars='norm')
-# gta.free_sources(minmax_TS=[None,10],free=False,pars='norm')
-# gta.free_sources(minmax_npred=[10,100],free=False,pars='norm')
-gta.free_source('isodiff')
-gta.free_source('galdiff')
-gta.free_source('4FGL J0319.8+4130')
-gta.free_sources(minmax_ts=[100, None], pars='norm')
-fit_result = gta.fit(optimizer='NEWMINUIT', reoptimize=True)
-gta.write_roi('30bpd_test.npy')
-print(gta.like())
-'''
 #actual simulation related stuff starts here
-
+# initialise class instance
+# could probably be a bit nicer in own class method. TODO do that!"
 test = janitor(source, gta)
 test.gta.free_sources(free=False)
 test.gta.free_source(test.name)
