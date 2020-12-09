@@ -67,7 +67,7 @@ print('m:', m)
 '''Set up variables and save paths'''
 prob_path = f'/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/grid_survival_prob/probs/prob{which_gm:03}.dat'
 loglike_path = f'/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/grid_ts/outdata/orig_data/all_data'
-roi_file = f'{cwd}/fits/simulation_base_roi.npy'
+roi_file = f'{cwd}/fits/simulation_base_roi_more_opt.npy'
 try:
     os.mkdir(loglike_path)
     print(f'created output path: {loglike_path}')
@@ -265,7 +265,7 @@ class janitor:
                     self.outdata[c, i*2+2] = v[1][i]['error']
                 except:
                     self.outdata[c, i*2+2] = np.nan
-        np.savetxt(f'{loglike_path}/out{which_gm}.dat', self.outdata, \
+        np.savetxt(f'{loglike_path}/out{which_gm}_more_opt.dat', self.outdata, \
                    header='ll_final norm norm_err alpha alpha_err beta beta_err ll_init', fmt='%1.9e')
 
 '''Setup starts here.'''
@@ -326,4 +326,4 @@ for i in range(nsim):
     test.write_outdata()
 ts = np.sort(2 * (test.outdata[:, 0] - test.outdata[:, -1]))
 test.ts_95 = np.array([ts[94]])
-np.savetxt(f'{loglike_path}/ts_95/ts_95_{which_gm}.dat', test.ts_95)
+np.savetxt(f'{loglike_path}/../ts_95/ts_95_{which_gm}_more_opt.dat', test.ts_95)
