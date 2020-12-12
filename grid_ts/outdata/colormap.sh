@@ -3,7 +3,7 @@
 # script to get python to do some colormaps
 SUBDIR=ts_95
 declare -a incomplete
-for i in {49..80}
+for i in {95..99}
 do
   files=($(ls roi_"$i"/"$SUBDIR"))
   # echo $files

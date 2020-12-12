@@ -21,30 +21,22 @@ input_arg = sys.argv[1]    # is a string type
 input_num = int(input_arg)    # use this to find correct g, m
 
 '''Set up roi/parameters space'''
-num_ROI = 100
 nsim = 100
-sim = np.linspace(0, num_ROI, num=num_ROI, endpoint=False, dtype=int)
 grid = np.linspace(0, 900, num=900, endpoint=False, dtype=int)
-index = np.zeros((sim.shape[0], grid.shape[0], 2), dtype=int)
-for i in range(sim.shape[0]):
-    for j in range(grid.shape[0]):
-        index[i, j, :] = sim[i], grid[j]
-index = index.reshape((sim.shape[0] * grid.shape[0], 2))
-
-which_roi = index[input_num, 0]
-which_gm = index[input_num, 1]
-roi_path = f'/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/roi_simulation/fits'
+which_gm = input_num
+roi_path = f'/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/grid_ts/fits'
 print('roi_path:', roi_path, os.path.isdir(roi_path))
 
 
 '''For testing, if running on cluster, copy roi files. else: dont.'''
+
 if not 'n1' in cwd:
     print('Im running on the cluster')
-    copytree(roi_path, f'{cwd}/roi_{which_roi}')
-    roi_file = f'{cwd}/roi_{which_roi}/roi_{which_roi}.npy'
+    # copytree(roi_path, f'{cwd}')
+    roi_file = f'{cwd}/fits/simulation_base_roi_more_opt.npy'
 else:
     print('Im running on the wgs')
-    roi_file = f'{roi_path}/simulation_base_roi.npy'
+    roi_file = f'{roi_path}/simulation_base_roi_more_opt.npy'
 print('roi_file:', roi_file, os.path.isfile(roi_file))
 
 
@@ -59,7 +51,7 @@ grid = grid.reshape((m_space.shape[0] * g_space.shape[0], 2))
 g = grid[which_gm, 0]
 m = grid[which_gm, 1]
 # print(grid)
-print('roi_number:', which_roi)
+# print('roi_number:', which_roi)
 print('g:', g)
 print('m:', m)
 
@@ -68,6 +60,7 @@ print('m:', m)
 prob_path = f'/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/grid_survival_prob/probs/prob{which_gm:03}.dat'
 loglike_path = f'/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/grid_ts/outdata/orig_data/all_data'
 roi_file = f'{cwd}/fits/simulation_base_roi_more_opt.npy'
+print('roi_file:', roi_file)
 try:
     os.mkdir(loglike_path)
     print(f'created output path: {loglike_path}')
@@ -265,7 +258,7 @@ class janitor:
                     self.outdata[c, i*2+2] = v[1][i]['error']
                 except:
                     self.outdata[c, i*2+2] = np.nan
-        np.savetxt(f'{loglike_path}/out{which_gm}_more_opt.dat', self.outdata, \
+        np.savetxt(f'{loglike_path}/out_opt_{which_gm}.dat', self.outdata, \
                    header='ll_final norm norm_err alpha alpha_err beta beta_err ll_init', fmt='%1.9e')
 
 '''Setup starts here.'''
@@ -326,4 +319,4 @@ for i in range(nsim):
     test.write_outdata()
 ts = np.sort(2 * (test.outdata[:, 0] - test.outdata[:, -1]))
 test.ts_95 = np.array([ts[94]])
-np.savetxt(f'{loglike_path}/../ts_95/ts_95_{which_gm}_more_opt.dat', test.ts_95)
+np.savetxt(f'{loglike_path}/../ts_95/ts_95_opt_{which_gm}.dat', test.ts_95)
