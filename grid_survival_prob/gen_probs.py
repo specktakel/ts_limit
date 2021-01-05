@@ -14,15 +14,15 @@ meaning that this has to be distributed across the cluster in 900 jobs, as well.
 
 '''parameters for generation'''
 param_list.append(int(sys.argv[1]))     # cheeky way to not delete for loop down there. Take $(ProcId) as arg for g/m combination.
-part = int(sys.argv[2])
-seed = 1
-nsim = 100    # small for testing purposes
+# part = int(sys.argv[2])
+seed = None
+nsim = 50    # small for testing purposes
 B0 = 10.
 ppb = 10    # points per bin
 header = f'seed: {seed}, nsim: {nsim}, B0: {B0}, ppb: {ppb}'
 config = np.array([seed, nsim, B0, ppb])
 # np.savetxt('/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/grid_survival_prob/config.dat', config, header=header)
-
+which_roi = int(sys.argv[2])
 
 '''Set up parameter list'''
 
@@ -53,15 +53,21 @@ kH = 2. * np.pi / lambda_min
 log10MeV = np.loadtxt(cwd+'/energy_bins.dat')
 full_length = log10MeV.shape[0]
 half_length = int(np.ceil(full_length / 2))
-if part == 1:
-    log10MeV = log10MeV[0:half_length]
-elif part == 2:
-    log10MeV = log10MeV[half_length:]
+# if part == 1:
+#     log10MeV = log10MeV[0:half_length]
+# elif part == 2:
+#     log10MeV = log10MeV[half_length:]
 EGeV = np.power(10., log10MeV - 3.)
 nbins = EGeV.shape[0]
 delta_e = log10MeV[1] - log10MeV[0]    # differences/bin width in log10 E bins
 delta_p = delta_e / ppb   # differences/bin width in in log10 prob bins
 log_prob_space = np.linspace(log10MeV[0], log10MeV[-1] + delta_e, num=log10MeV.shape[0]*ppb, endpoint=False) - (ppb - 1) / 2 * delta_p
+outpath = f"/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/grid_survival_prob/new_probs/roi_{which_roi}"
+try:
+    print(f"making directory {outpath}")
+    os.mkdir(outpath)
+except FileExistsError:
+    print(f"{outpath} already exists")
 print(log_prob_space.shape)
 EGeV_morebins = np.power(10., log_prob_space - 3.)
 p_gamma_av = np.zeros((nsim, nbins))
@@ -95,6 +101,7 @@ for i in param_list:    # i: index of parameter set g/m+
     p_gamma_x, p_gamma_y, p_a = m.run()
     p_gamma_tot = p_gamma_x + p_gamma_y
     p_orig = p_gamma_tot.copy()
+    # np.savetxt(f'/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/grid_survival_prob/new_probs/part_{part}.dat', p_orig)
     del p_a
     del p_gamma_x
     del p_gamma_y
@@ -107,7 +114,16 @@ for i in param_list:    # i: index of parameter set g/m+
     #     for _bin in range(nbins):
     #         # print(p_gamma_tot[_sim, _bin*ppb:(_bin+1)*ppb])
     #         p_gamma_av[_sim, _bin] = np.average(p_gamma_tot[_sim, _bin*ppb:(_bin+1)*ppb], axis=-1)
-    outpath = f"/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/grid_survival_prob/probs/prob{i:03}.dat"
+    outfile = f"{outpath}/prob_{i:03}.dat"
+    try:
+        old = np.loadtxt(outfile)
+        outdata = np.append(old, p_orig, axis=0)
+    except:
+        np.savetxt(outfile, p_orig)
+
+    np.savetxt(outfile, outdata)
+
+    '''
     if part == 1:
         print(p_orig.shape)
         np.savetxt('temp_data.dat', p_orig, header='rows: #nsim, columns: #energy bin, '+header)
@@ -118,7 +134,9 @@ for i in param_list:    # i: index of parameter set g/m+
         print(half_data.shape)
         full_data = np.concatenate((half_data, p_orig), axis=1)
         print(full_data.shape)
-        np.savetxt(outpath, full_data, header='rows: #nsim, columns: #energy bin, '+header)
+        prev_data = np.loadtxt(outpath)
+        full_data = np.append(prev_data, full_data, axis=0)
+        np.savetxt(outfile, full_data, header='rows: #nsim, columns: #energy bin, '+header)
     # outpath_2 = f"/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/grid_survival_prob/probs/ppb_allbins_{ppb:02}.dat"
     # e_bins_out = f"/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/grid_survival_prob/probs/ppb_ebins_{ppb:02}.dat"
     # np.savetxt(outpath_2, p_gamma_tot)
@@ -126,3 +144,4 @@ for i in param_list:    # i: index of parameter set g/m+
     #t_1 = time.process_time()
     #print(f'elapsed time for {nsim} simulations:', t_1 - t_0)
     #print(f'estimated time for 900 parameter combinations:', (t_1 - t_0) * 900)p.savetxt(outpath, p_gamma_av, header=header)
+    '''

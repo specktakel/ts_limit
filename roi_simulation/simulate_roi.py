@@ -9,11 +9,11 @@ cwd = os.getcwd()
 # t_0 = int(time.time())
 input_arg = sys.argv[1]
 input_num = int(input_arg)
-nsim = 1 
-sim_list = []
-sim_list.append(input_num)
+nsim = 2
+sim_list = [input_num * nsim + l + 105 for l in range(nsim)]
+# sim_list.append(input_num)
 path_to_conda = os.environ['CONDA_PREFIX']
-
+print(sim_list)
 print(cwd)
 
 with open(cwd+'/config_local.yaml', 'r') as i:
@@ -31,8 +31,8 @@ source = config['selection']['target']
 
 with open(cwd+'/config_modified.yaml', 'w') as o:
     yaml.dump(config, o)
-
-gta = GTAnalysis.create(cwd+'/fits/simulation_base_roi.npy', config=cwd+'/config_modified.yaml')
+sys.exit()
+gta = GTAnalysis.create(cwd+'/fits/fully_optimized.npy', config=cwd+'/config_modified.yaml')
 base_like = gta.like()
 # simulated_like = np.zeros(nsim)
 # t_1 = int(time.time())
@@ -43,7 +43,8 @@ for i in sim_list:
     roi_dir = f'/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/roi_simulation/roi_files/roi_{i}'
     gta.free_sources(free=False)
     gta.simulate_roi()
-    gta.optimize()
+    for j in range(5):
+        gta.optimize()
     gta.free_source('isodiff')
     gta.free_source('galdiff')
     gta.free_source(source)
@@ -62,10 +63,11 @@ for i in sim_list:
     gta.write_roi(f'/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/roi_simulation/roi_files/roi_{i}/roi_{i}.npy')
     np.savetxt(like_save_path, like)
     gta.simulate_roi(restore=True)
-
+    gta.load_roi('fully_optimized')
 # t_2 = int(time.time())
 # print(f'time for simulations: {t_2 - t_1}')
 # np.savetxt(like_save_path, simulated_like, header=f'base_loglike: {base_like}')
 
 # print(f'total elapsed time (in seconds): {t_2 - t_0}, only for generation and fitting: {t_2 - t_1}')
 # print(f'approx time per 100 simulations: {int((t_2 - t_1) / nsim * 100)}')
+
