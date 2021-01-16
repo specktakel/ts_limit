@@ -33,5 +33,5 @@ echo "conda path"
 echo "$CONDA_PREFIX"
 echo "STARTING THE PYTHON SCRIPT with argument:"
 echo $1
-python /nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/grid_survival_prob/gen_probs.py $1 1
-python /nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/grid_survival_prob/gen_probs.py $1 2
+python /nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/grid_survival_prob/gen_probs_fix.py $1 $2 50
+python /nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/grid_survival_prob/gen_probs.py $1 $2 50

@@ -10,22 +10,18 @@ param_list = []
 For nsim=100, ppb=4 and one parameter set of g, m, execution takes roughly 850 seconds,
 meaning that this has to be distributed across the cluster in 900 jobs, as well.
 '''
-
+nsim = int(sys.argv[3])
 
 '''parameters for generation'''
-param_list.append(int(sys.argv[1]))     # cheeky way to not delete for loop down there. Take $(ProcId) as arg for g/m combination.
-# part = int(sys.argv[2])
+param_list.append(int(sys.argv[1]))
 seed = None
-nsim = 50    # small for testing purposes
 B0 = 10.
 ppb = 10    # points per bin
 header = f'seed: {seed}, nsim: {nsim}, B0: {B0}, ppb: {ppb}'
 config = np.array([seed, nsim, B0, ppb])
-# np.savetxt('/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/grid_survival_prob/config.dat', config, header=header)
 which_roi = int(sys.argv[2])
 
 '''Set up parameter list'''
-
 g_space = np.logspace(-1., 2., num=30, base=10.0, endpoint=True)    # in 1e-11 1/GeV
 m_space = np.logspace(-1., 2., num=30, base=10.0, endpoint=True)    # in neV
 grid = np.zeros((g_space.shape[0], m_space.shape[0], 2))
@@ -34,13 +30,8 @@ for i in range(g_space.shape[0]):
         grid[i, j, :] = g_space[i], m_space[j]
 grid = grid.reshape((m_space.shape[0] * g_space.shape[0], 2))
 
-# prob dont need those two, later done in for loop
-#g = grid[input_num, 0]
-#m = grid[input_num, 1]
-
 
 '''Set up ALP'''
-
 ngc1275 = Source(z = 0.017559, ra = '03h19m48.1s', dec = '+41d30m42s')
 pin = np.diag((1.,1.,0.)) * 0.5
 lambda_max = 35.
@@ -51,14 +42,7 @@ kH = 2. * np.pi / lambda_min
 
 '''Energy binning related stuff goes here'''
 log10MeV = np.loadtxt(cwd+'/energy_bins.dat')
-# full_length = log10MeV.shape[0]
-# half_length = int(np.ceil(full_length / 2))
-# if part == 1:
-#     log10MeV = log10MeV[0:half_length]
-# elif part == 2:
-#     log10MeV = log10MeV[half_length:]
-EGeV = np.power(10., log10MeV - 3.)
-nbins = EGeV.shape[0]
+nbins = log10MeV.shape[0]
 delta_e = log10MeV[1] - log10MeV[0]    # differences/bin width in log10 E bins
 delta_p = delta_e / ppb   # differences/bin width in in log10 prob bins
 log_prob_space = np.linspace(log10MeV[0], log10MeV[-1] + delta_e, num=log10MeV.shape[0]*ppb, endpoint=False) - (ppb - 1) / 2 * delta_p
@@ -70,7 +54,6 @@ except FileExistsError:
     print(f"{outpath} already exists")
 print(log_prob_space.shape)
 EGeV_morebins = np.power(10., log_prob_space - 3.)
-p_gamma_av = np.zeros((nsim, nbins))
 '''Loop over parameters'''
 # param_list = [input_num] 
 for i in param_list:    # i: index of parameter set g/m+
@@ -106,7 +89,7 @@ for i in param_list:    # i: index of parameter set g/m+
     del p_gamma_x
     del p_gamma_y
     del p_gamma_tot
-    p_orig = p_orig.reshape((nsim, EGeV.shape[0], ppb))
+    p_orig = p_orig.reshape((nsim, nbins, ppb))
     p_orig = np.average(p_orig, axis=-1)
     # print(p_orig.shape)
     # print(p_gamma_tot.shape)
@@ -122,7 +105,8 @@ for i in param_list:    # i: index of parameter set g/m+
         outdata = p_orig
 
     np.savetxt(outfile, outdata)
-
+    del p_orig
+    del outdata
     '''
     if part == 1:
         print(p_orig.shape)

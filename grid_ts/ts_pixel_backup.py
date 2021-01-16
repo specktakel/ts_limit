@@ -13,14 +13,17 @@ from gammaALPs.base import environs, transfer
 from iminuit import Minuit
 # from shutil import copytree
 import shutil
+from probs import Probs   # own package, let's see if this works...
 
 path_to_conda = os.environ['CONDA_PREFIX']
 cwd = os.getcwd()
 # %matplotlib inline
+### parameters of simulation:
+nsim = 25
+
 which_gm = int(sys.argv[1])    # use this to find correct g, m
 which_roi = int(sys.argv[2])
 which_range = int(sys.argv[3])
-
 
 try:
     num = int(sys.argv[4])
@@ -30,19 +33,8 @@ except IndexError:
     rerun = False
     print("initial run")
 
-
-'''Set up roi/parameters space'''
-nsim = 25
-grid = np.linspace(0, 900, num=900, endpoint=False, dtype=int)
-# roi_path = f'{cwd}/roi_{which_roi}'
-# print('roi_path:', roi_path, os.path.isdir(roi_path))
-
-
-'''For testing, if running on cluster, copy roi files. else: dont.'''
-
 if not 'n1/kuhlmann' in cwd:
     print('Im running on the cluster')
-    # copytree(roi_path, f'{cwd}')
     roi_dir = f'{cwd}/roi_{which_roi}'
 else:
     print('Im running on the wgs')
@@ -53,17 +45,22 @@ else:
     except FileExistsError:
         print('temp directory exists')
     print(f'should copy from {roi_origin} to {roi_dir}')
-#     '''
     files = os.listdir(roi_origin)
-    print(files)
     for f in files:
-#         continue
-        shutil.copy2(f'{roi_origin}/{f}', f'{roi_dir}')     # should overwrite any files present, clean up afterwards anyway...
-#     '''
-    # roi_file = f'{roi_path}/simulation_base_roi_more_opt.npy'
-# print('roi_file:', roi_file, os.path.isfile(roi_file))
+        # shutil.copy2(f'{roi_origin}/{f}', f'{roi_dir}')     # should overwrite any files present, clean up afterwards anyway...
+        pass
+prob_path = f'/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/grid_survival_prob/new_probs/roi_201/prob_{which_gm:03}.dat'
+# prob_path = f'/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/grid_survival_prob/new_probs/roi_100/prob_{which_gm:03}.dat'
+loglike_dir = f'/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/grid_ts/outdata/roi_{which_roi}'
+roi_file = f'{roi_dir}/sim_{which_roi}.npy'
 
-# roi_path = f"{cwd}/fits"      # for testing on astro-wgs1[1, 2]
+
+'''Set up roi/parameters space'''
+grid = np.linspace(0, 900, num=900, endpoint=False, dtype=int)
+# roi_path = f'{cwd}/roi_{which_roi}'
+# print('roi_path:', roi_path, os.path.isdir(roi_path))
+
+
 '''Set up g/m space and get correct combination'''
 g_space = np.logspace(-1., 2., num=30, base=10.0, endpoint=True)    # in 1e-11 1/GeV
 m_space = np.logspace(-1., 2., num=30, base=10.0, endpoint=True)    # in neV
@@ -80,11 +77,6 @@ print('g:', g)
 print('m:', m)
 
 
-'''Set up variables and save paths'''
-prob_path = f'/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/grid_survival_prob/new_probs/roi_{which_roi}/prob_{which_gm:03}.dat'
-# prob_path = f'/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/grid_survival_prob/new_probs/roi_100/prob_{which_gm:03}.dat'
-loglike_dir = f'/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/grid_ts/outdata/roi_{which_roi}'
-roi_file = f'{roi_dir}/sim_{which_roi}.npy'
 print('roi_file:', roi_file)
 try:
     os.mkdir(loglike_dir)
@@ -135,11 +127,14 @@ class janitor:
         self.reload_like = np.zeros((nsim), dtype=float)
         self.gta.set_source_spectrum(self.name, spectrum_type='FileFunction')
         self.logEMeV, self.init_dnde = self.gta.get_source_dnde(self.name)
-        self.en = np.power(10., self.logEMeV)
+        self.EMeV = np.power(10., self.logEMeV)
         self.get_init_vals()
-        self.read_probs()
+        # self.read_probs()
+        self.g = grid[which_gm, 0]
+        self.m = grid[which_gm, 1]
         dat = np.load(roi_file, allow_pickle=True).flat[0]
         self.nplike = dat['roi']['loglike']
+        self.prob = Probs(self.logEMeV, self.g, self.m)
 
 
     def log_parabola(self, x, norm, alpha, beta):
@@ -157,7 +152,7 @@ class janitor:
         '''
 
         dnde = self.log_parabola(en, norm, alpha, beta)
-        return self.p[self.index] * dnde
+        return self.p[0] * dnde
 
 
     def read_probs(self):
@@ -169,9 +164,18 @@ class janitor:
         self.p = dat
 
 
+    def gen_probs(self):
+        if not hasattr(self.prob, 'mod'):
+            self.prob.load_mod()
+        else:
+            pass    
+        self.p = self.prob.propagation()
+        self.prob.del_mod()
+
+
     def cost_func_w_alps(self, norm, alpha, beta):
         print(norm, alpha, beta)
-        dnde = self.survival_logparabola(self.en, norm, alpha, beta)
+        dnde = self.survival_logparabola(self.EMeV, norm, alpha, beta)
         # print 'dnde', dnde
         # print 'setting dnde'
         self.gta.set_source_dnde(self.name, dnde)
@@ -198,6 +202,7 @@ class janitor:
     def fit(self):
         '''Does the fitting stuff to get the new parameters of photon survival prob * logparabola.
         '''
+        self.gen_probs()
         if rerun:
             self.temp = np.zeros((1, 3), dtype=float)
             self.temp[0, 0] = - self.gta.like()
@@ -309,4 +314,4 @@ for i in indices:
 # ts_fit = np.sort(2 * (test.outdata[:, 2] - test.outdata[:, 0]))
 # ts_minuit = np.sort(2 * (test.outdata[:, 1] - test.outdata[:, 0]))
 # test.ts_95 = np.array([ts_fit[8], ts_minuit[8]])
-# np.savetxt(f'{ts_path}/ts_9_{which_gm}.dat', test.ts_95)
+# np.savetxt(f'{ts_path}/ts_9_{which_gm}.dat', test.ts_95)

@@ -26,7 +26,10 @@ try:
     which_roi = int(sys.argv[1])
 except IndexError:
     pass
-
+try:
+    H0 = np.loadtxt(f'../../roi_simulation/roi_files/roi_{which_roi}/loglike_H0.dat')
+except IOError:
+    pass
 # which_roi = int(sys.argv[1])
 
 # directory = f'roi_{which_roi}/ts_95'
@@ -67,7 +70,9 @@ for v in data_list:
         # print(nium)
         numbers[num, 1] = 1
         temp = np.loadtxt(v)
+        # temp = temp[:10, :]
         # print(temp.shape)
+        
         if np.any(np.isclose(temp, np.zeros(temp.shape))):
             print(f"{v} has zeros!")
             for c, line in enumerate(temp):
@@ -76,7 +81,7 @@ for v in data_list:
                     missing_lines.append([num, c])
                 else:
                     pass
-        elif temp.shape[0] != 100:
+        elif temp.shape[0] != 100 or temp.shape[1] != 3:
             
             print(v, "wrong shape")
             missing_lines.append([num, 0])
@@ -86,8 +91,12 @@ for v in data_list:
             continue 
         else:
             pass
-        ts_fit = 2 * np.sort(temp[:, -1] - temp[:, 0])
-         #print(ts_fit.shape)
+        
+        try:
+            ts_fit = 2 * np.sort(temp[:, -1] - H0)
+        except:
+            ts_fit = 2 * np.sort(temp[:, -1] - temp[:, 0])
+        #print(ts_fit.shape)
         # print(v, ts.shape)
         likes[num] = ts_fit[94]
         # ts_minuit = 2 * np.sort(temp[:, 1] - temp[:, 0])
@@ -107,8 +116,10 @@ for line in missing_lines:
         
 missing_args = np.array(missing_lines)
 np.savetxt(f'roi_{which_roi}/missing_args.txt', np.array(missing_gm), fmt="%1.1i")
+# sys.exit()
 
-
+'''
+# sys.exit()
 try:
     ts_values = np.loadtxt('ts_mock_data.dat')
 except:
@@ -117,8 +128,8 @@ except:
 ts_values[which_roi - 100] = np.max(likes)
 ts_values = ts_values.reshape((100, 1))
 np.savetxt('ts_mock_data.dat', ts_values)
-sys.exit()
-
+# sys.exit()
+'''
 
 '''
 #directory = 'orig_data/ts_95'

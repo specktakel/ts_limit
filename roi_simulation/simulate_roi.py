@@ -4,70 +4,67 @@ import yaml
 import os
 import sys
 import matplotlib.pyplot as plt
-# import time
+import shutil
 cwd = os.getcwd()
-# t_0 = int(time.time())
 input_arg = sys.argv[1]
 input_num = int(input_arg)
-nsim = 2
-sim_list = [input_num * nsim + l + 105 for l in range(nsim)]
-# sim_list.append(input_num)
+# nsim = 2
 path_to_conda = os.environ['CONDA_PREFIX']
-print(sim_list)
 print(cwd)
-
+master_loc = '/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/roi_simulation/fits_01'
 with open(cwd+'/config_local.yaml', 'r') as i:
     config = yaml.safe_load(i)
 
-config['fileio']['workdir'] =  cwd+'/fits'
-config['fileio']['outdir'] = cwd+'/fits'
-config['fileio']['logfile'] = cwd+'/fits/fermipy.log'
-config['data']['ltcube'] = cwd+'/fits/ltcube_00.fits'
-config['model']['galdiff'] = path_to_conda+'/share/fermitools/refdata/fermi/galdiffuse/gll_iem_v07.fits'
-config['model']['isodiff'] = path_to_conda+'/share/fermitools/refdata/fermi/galdiffuse/iso_P8R3_SOURCE_V3_v1.txt'
-config['logging']['verbosity'] = 4
+if 'n1/kuhlmann' in cwd:
+    workdir = f'/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/roi_simulation/roi_files/roi_{input_arg}'
+else:
+    workdir = f'{cwd}/fits_01'
 
+config['fileio']['workdir'] =  f'{workdir}'
+config['fileio']['outdir'] = f'{workdir}'
+config['fileio']['logfile'] = f'{workdir}/fermipy.log'
+config['data']['ltcube'] = f'{workdir}/ltcube_00.fits'
+config['model']['galdiff'] = f'{path_to_conda}/share/fermitools/refdata/fermi/galdiffuse/gll_iem_v07.fits'
+config['model']['isodiff'] = f'{path_to_conda}/share/fermitools/refdata/fermi/galdiffuse/iso_P8R3_SOURCE_V3_v1.txt'
+config['logging']['verbosity'] = 4
 source = config['selection']['target']
 
 with open(cwd+'/config_modified.yaml', 'w') as o:
     yaml.dump(config, o)
-sys.exit()
-gta = GTAnalysis.create(cwd+'/fits/fully_optimized.npy', config=cwd+'/config_modified.yaml')
-base_like = gta.like()
-# simulated_like = np.zeros(nsim)
-# t_1 = int(time.time())
-# print(f'time for loading base roi: {t_1 - t_0}')
-for i in sim_list:
-    print(f'doing sim with index {i}')
-    like_save_path = f'/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/roi_simulation/roi_files/roi_{i}/loglike_H0_{i}.dat'     # loglike of null hypothesis (no alps)
-    roi_dir = f'/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/roi_simulation/roi_files/roi_{i}'
-    gta.free_sources(free=False)
-    gta.simulate_roi()
-    for j in range(5):
-        gta.optimize()
-    gta.free_source('isodiff')
-    gta.free_source('galdiff')
-    gta.free_source(source)
-    gta.free_sources(distance=3, pars='norm')
-    gta.free_sources(minmax_ts=[100, None], pars='norm')
-    fit_result = gta.fit(optimizer='NEWMINUIT', reoptimize=True)
-    like = gta.like()
-    like = np.array([like])
-    # simulated_like[i] = like
+
+
+# sys.exit()
+if 'n1/kuhlmann' in cwd:
     try:
-        os.mkdir(roi_dir)
-        print(f'dir {roi_dir} created succesfully') 
+        os.mkdir(workdir)
     except FileExistsError:
-        print(f'dir {roi_dir} already exists, proceeding...')
-    
-    gta.write_roi(f'/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/roi_simulation/roi_files/roi_{i}/roi_{i}.npy')
-    np.savetxt(like_save_path, like)
-    gta.simulate_roi(restore=True)
-    gta.load_roi('fully_optimized')
-# t_2 = int(time.time())
-# print(f'time for simulations: {t_2 - t_1}')
-# np.savetxt(like_save_path, simulated_like, header=f'base_loglike: {base_like}')
+        print('output directory already exists')
+    roi_path = workdir
+    print(roi_path)
+    files = os.listdir(master_loc)
+    print('files at master loc:', files)
+    for f in files:
+        shutil.copy2(f'{master_loc}/{f}', f'{workdir}')    # copying from master file location
+else:
+    roi_path = f'{cwd}/fits_01'
 
-# print(f'total elapsed time (in seconds): {t_2 - t_0}, only for generation and fitting: {t_2 - t_1}')
-# print(f'approx time per 100 simulations: {int((t_2 - t_1) / nsim * 100)}')
-
+gta = GTAnalysis.create(f'{roi_path}/fit_newminuit', cwd+'/config_modified.yaml')
+print('loaded loglike:', -gta.like())
+roi_npy = np.load(f'{roi_path}/fit_newminuit.npy', allow_pickle=True).flat[0]
+print('numpy loglike:', roi_npy['roi']['loglike'])
+like_save_path = f'{workdir}/loglike_H0_{input_arg}.dat'     # loglike of null hypothesis (no alps)
+gta.free_sources(free=False)
+gta.simulate_roi()
+for j in range(5):
+    gta.optimize()
+print("loglike of saved roi", -gta.like())
+gta.write_roi(f'sim_{input_arg}')
+gta.free_source(source)
+gta.fit(optimizer='NEWMINUIT', reoptimize=True)
+gta.free_source(source, free=False)
+gta.free_source(source, pars='norm')
+gta.free_source('isodiff')
+gta.free_source('galdiff')
+gta.fit(optimizer='NEWMINUIT', reoptimize=True)
+like = np.array([-gta.like()])
+np.savetxt(like_save_path, like)
