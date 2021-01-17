@@ -1,6 +1,6 @@
 import numpy as np
 from gammaALPs import Source, ALP, ModuleList
-# import gc
+import gc
 
 class Probs():
     def __init__(self, log10MeV, g=1, m=1, nsim=1, B0=10., seed=None, ppb=10, lambda_min=0.7, lambda_max=35., q=-2.80):
@@ -16,6 +16,8 @@ class Probs():
         self.kL = 2. * np.pi / lambda_max
         self.kH = 2. * np.pi / lambda_min
         self.setup_energy()
+        self.alp = ALP(self.m, self.g)
+        self.source = Source(z = 0.017559, ra = '03h19m48.1s', dec = '+41d30m42s')
         self.mod = self.module()
 
 
@@ -28,11 +30,9 @@ class Probs():
 
 
     def module(self):
-        alp = ALP(self.m, self.g)
-        ngc1275 = Source(z = 0.017559, ra = '03h19m48.1s', dec = '+41d30m42s')
-        m = ModuleList(alp, ngc1275, pin=self.pin, EGeV=self.EGeV)
+        m = ModuleList(self.alp, self.source, pin=self.pin, EGeV=self.EGeV)
         m.add_propagation("ICMGaussTurb", 
-                          0, # position of module counted from the source. 
+                          0,
                           nsim = self.nsim,
                           B0 = self.B0,
                           n0 = 39.,
@@ -48,8 +48,8 @@ class Probs():
                           q = self.q,
                           seed = self.seed
                           )
-        m.add_propagation("EBL",1, model = 'dominguez') # EBL attenuation comes second, after beam has left cluster
-        m.add_propagation("GMF",2, model = 'jansson12', model_sum = 'ASS') # finally, the beam enters the Milky Way Field
+        m.add_propagation("EBL",1, model = 'dominguez')
+        m.add_propagation("GMF",2, model = 'jansson12', model_sum = 'ASS')
         return m
 
 
@@ -63,7 +63,7 @@ class Probs():
 
     def del_mod(self):
         del self.mod
-        # gc.collect()
+        gc.collect()
 
     def load_mod(self):
         self.mod = self.module()

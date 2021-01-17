@@ -15,6 +15,14 @@ from iminuit import Minuit
 import shutil
 from probs import Probs   # own package, let's see if this works...
 import gc
+from resource import *
+import psutil
+import os
+
+process = psutil.Process(os.getpid())
+soft, hard = getrlimit(RLIMIT_AS)
+
+
 path_to_conda = os.environ['CONDA_PREFIX']
 cwd = os.getcwd()
 # %matplotlib inline
@@ -129,12 +137,12 @@ class janitor:
         self.logEMeV, self.init_dnde = self.gta.get_source_dnde(self.name)
         self.EMeV = np.power(10., self.logEMeV)
         self.get_init_vals()
-        self.read_probs()
+        # self.read_probs()
         self.g = grid[which_gm, 0]
         self.m = grid[which_gm, 1]
         dat = np.load(roi_file, allow_pickle=True).flat[0]
         self.nplike = dat['roi']['loglike']
-        # self.prob = Probs(self.logEMeV, self.g, self.m)
+        self.prob = Probs(self.logEMeV, self.g, self.m)
 
 
     def log_parabola(self, x, norm, alpha, beta):
@@ -152,7 +160,7 @@ class janitor:
         '''
 
         dnde = self.log_parabola(en, norm, alpha, beta)
-        return self.p[self.index] * dnde
+        return self.p[0] * dnde
 
 
     def read_probs(self):
@@ -163,7 +171,7 @@ class janitor:
         print(f'reading probabilities: {prob_path}')
         self.p = dat
 
-    '''
+
     def gen_probs(self):
         if not hasattr(self.prob, 'mod'):
             self.prob.load_mod()
@@ -173,7 +181,7 @@ class janitor:
         self.prob.del_mod()
         unreachable = gc.collect()
         print("objects unreachable by gc:", unreachable)
-    '''
+
 
     def cost_func_w_alps(self, norm, alpha, beta):
         print(norm, alpha, beta)
@@ -300,6 +308,10 @@ roi_numpy = np.load(roi_file, allow_pickle=True).flat[0]
 print('fermipy loglike:', -gta.like())
 print('numpy loglike:', roi_numpy['roi']['loglike'])
 test = janitor(source, gta)
+
+setrlimit(RLIMIT_AS, (2048*1024*1024, hard))
+print(getrlimit(RLIMIT_AS))
+
 test.indices = indices
 
 for i in indices:
