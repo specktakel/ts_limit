@@ -1,4 +1,4 @@
-from probs import Probs
+from ts_limit.grid_survival_prob.probs import Probs
 
 import numpy as np
 import os
@@ -31,24 +31,30 @@ m = grid[which_gm, 1]
 
 '''Energy binning related stuff goes here'''
 log10MeV = np.loadtxt(cwd+'/energy_bins.dat')
-#outpath = f"/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/grid_survival_prob/new_probs/roi_{which_roi}"
-outpath = cwd
+outpath = f"/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/grid_survival_prob/new_probs/roi_{which_roi}"
+# outpath = cwd
 
-save_path = f'{cwd}/prob_memory_test.dat'
+save_path = f'{cwd}/prob_diff_fractured_{which_gm}.dat'
 '''Create out directory if necessary.'''
 try:
     print(f"making directory {outpath}")
     os.mkdir(outpath)
 except FileExistsError:
     print(f"{outpath} already exists")
-
-
+nsim=3
+# log10MeV = log10MeV[0:20]
+# num = 1
 probs = Probs(log10MeV, g, m)
-p = np.zeros((nsim, log10MeV.shape[0]))
+p = np.zeros((2*nsim, log10MeV.shape[0]))
+probs2 = Probs(log10MeV, g, m)
 for i in range(nsim):
-    p[i] = probs.propagation()
+    seed = int(f'{which_roi}{which_gm:03}{i:02}')
+    p[i*2, :] = probs.fractured_propagation(seed)
+    #probs.set_up_energy()
+    #probs.seed = seed
+    # probs.load_mod()
+    p[i*2+1, :] = probs2.propagation(seed=seed)
     print("memory usage:", process.memory_info().rss * 1e-6)
-    probs.reload_module()
     print(i, "done")
 
 try:
@@ -57,7 +63,7 @@ try:
 except:
     outdata = p
 
-np.savetxt(save_path, p)
+np.savetxt(save_path, outdata)
 
 
 

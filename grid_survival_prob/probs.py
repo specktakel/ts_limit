@@ -1,6 +1,10 @@
 import numpy as np
 from gammaALPs import Source, ALP, ModuleList
 import gc
+from math import floor, ceil
+import psutil
+import os
+process = psutil.Process(os.getpid())
 
 class Probs():
     def __init__(self, log10MeV, g=1, m=1, nsim=1, B0=10., seed=None, ppb=10, lambda_min=0.7, lambda_max=35., q=-2.80):
@@ -15,13 +19,13 @@ class Probs():
         self.q = q
         self.kL = 2. * np.pi / lambda_max
         self.kH = 2. * np.pi / lambda_min
-        self.setup_energy()
+        # self.set_up_energy()
         self.alp = ALP(self.m, self.g)
         self.source = Source(z = 0.017559, ra = '03h19m48.1s', dec = '+41d30m42s')
-        self.mod = self.module()
+        # self.mod = self.module()
 
 
-    def setup_energy(self):
+    def set_up_energy(self):
         self.nbins = self.log10MeV.shape[0]
         delta_e = self.log10MeV[1] - self.log10MeV[0]
         delta_p = delta_e / self.ppb
@@ -53,7 +57,14 @@ class Probs():
         return m
 
 
-    def propagation(self):
+    def propagation(self, seed=None):
+        if seed is not None:
+            self.seed = seed
+        else:
+            pass
+        print(self.seed)
+        self.set_up_energy()
+        self.load_mod()
         p_gamma_x, p_gamma_y, p_gamma_a = self.mod.run()
         p_gamma_tot = p_gamma_x + p_gamma_y
         p_out = p_gamma_tot.reshape((self.nsim, self.nbins, self.ppb))
@@ -65,6 +76,7 @@ class Probs():
         del self.mod
         gc.collect()
 
+
     def load_mod(self):
         self.mod = self.module()
 
@@ -74,6 +86,35 @@ class Probs():
         self.load_mod()
 
 
-if __name__ == "__main":
+    def fractured_propagation(self, seed):
+        try:
+            self.del_mod()
+        except AttributeError:
+            pass
+        self.seed = seed
+        print('seed:', seed)
+        if self.seed is None:
+            print("WARNING! seed is None! This will lead to unphysical results!")
+        log10MeV = self.log10MeV.copy()
+        length = log10MeV.shape[0]
+        parts = ceil(length / 20)
+        p = np.zeros((self.nsim, length))
+        for i in range(parts):
+            print(i)
+            self.log10MeV = log10MeV[i*20:(i+1)*20]
+            self.set_up_energy()
+            self.load_mod()
+            print("memory usage with modul:", process.memory_info().rss * 1e-6)
+            temp = self.propagation()
+            print("memory usage after propagation:", process.memory_info().rss * 1e-6)
+            self.del_mod()
+            print("memory usage after del:", process.memory_info().rss * 1e-6)
+            p[:, i*20:(i+1)*20] = temp
+        self.log10MeV = log10MeV.copy()
+        # print(self.log10MeV)
+        return p
+
+
+if __name__ == "__main__":
     sys.exit()
 
