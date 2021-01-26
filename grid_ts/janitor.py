@@ -1,8 +1,11 @@
 import gc
-from probs import Probs
 from iminuit import Minuit
-
-
+import os
+import yaml
+import numpy as np
+from fermipy.gtanalysis import GTAnalysis
+import psutil
+process = psutil.Process(os.getpid())
 '''Class that handles the grid analysis, e.g. selection of g/m, fitting, data handling.
 '''
 
@@ -10,23 +13,25 @@ class Janitor:
     '''Because janitors do the work.
     '''
 
-    def __init__(self, which_gm, which_roi, which_range, paths, rerun=False, load_probs=True):
-        self.rerun = rerun
+    def __init__(self, which_gm, which_roi, which_range, paths, load_probs=True):
+        self.which_gm = which_gm
+        self.which_roi = which_roi
+        self.which_range = which_range
         self.path_dict = paths
+        self.set_up_paths()
+        self.write_yaml_config()
+        self.init_arrays()
+        self.find_gm(which_gm)
         self.set_up_roi()
-        
-        self.reload_like = np.zeros((nsim), dtype=float)
-        self.gta.set_source_spectrum(self.name, spectrum_type='FileFunction')
-        
-        # self.read_probs()
-        self.load_probs=load_probs
+        self.load_probs = load_probs
         if not self.load_probs:
+            from ts_limit.grid_survival_prob.probs import Probs
             self.prob = Probs(self.logEMeV, self.g, self.m)
         else:
-            pass
+            self.read_probs()
 
 
-    def find_gm(self):
+    def find_gm(self, which_gm):
         '''Finds from a 30 by 30 grid the correct value of g and m
         '''
         g_space = np.logspace(-1., 2., num=30, base=10.0, endpoint=True)    # in 1e-11 1/GeV
@@ -39,7 +44,18 @@ class Janitor:
         self.g = grid[which_gm, 0]
         self.m = grid[which_gm, 1]
 
-    def set_up_roi(self)
+
+    def set_up_paths(self):
+        self.save_path = self.path_dict['save_path']
+        self.save_dir = self.path_dict['save_dir']
+        self.prob_path = self.path_dict['prob_path']
+        self.roi_file = self.path_dict['roi_file']
+        self.roi_dir = self.path_dict['roi_dir']
+        self.package_path = self.path_dict['package_path']
+        self.config_path = self.path_dict['config_path'] 
+
+
+    def set_up_roi(self):
         '''Loads fermipy GTAnalysis object, sets up sources,
         loads some dictionaries of values for later use.
         '''
@@ -48,16 +64,18 @@ class Janitor:
         self.gta.free_source(self.name)
         self.src_model = self.gta.get_src_model(self.name)
         self.init_like = - self.gta.like()
+        self.gta.set_source_spectrum(self.name, spectrum_type='FileFunction')
         self.logEMeV, self.init_dnde = self.gta.get_source_dnde(self.name)
         self.EMeV = np.power(10., self.logEMeV)
         self.get_init_vals()
 
     def init_arrays(self): 
-        self.outdata = np.zeros((nsim, 3), dtype=float)
-        self.ll_minuit = np.zeros((nsim), dtype=float)
-        self.ll_fit = np.zeros((nsim), dtype=float)
+        self.outdata = np.zeros((1, 3), dtype=float)
+        self.ll_minuit = np.zeros((1), dtype=float)
+        self.ll_fit = np.zeros((1), dtype=float)
+        self.reload_like = np.zeros((1), dtype=float)
         self.res = []
-        dat = np.load(roi_file, allow_pickle=True).flat[0]
+        dat = np.load(self.roi_file, allow_pickle=True).flat[0]
         self.nplike = dat['roi']['loglike']
 
     def write_yaml_config(self):
@@ -105,22 +123,16 @@ class Janitor:
         '''Reads in the probabilities of the pixel the code is working on.
         Returns: nothing, sets self.p to correct array.
         '''
-        dat = np.loadtxt(prob_path)
-        print(f'reading probabilities: {prob_path}')
+        dat = np.loadtxt(self.prob_path)
+        print(f'reading probabilities: {self.prob_path}')
         self.p = dat
 
 
     def gen_probs(self):
         '''Generates probabilities on the fly.
         '''
-        if not hasattr(self.prob, 'mod'):
-            self.prob.load_mod()
-        else:
-            pass    
-        self.p = self.prob.propagation()
-        self.prob.del_mod()
-        unreachable = gc.collect()
-        print("objects unreachable by gc:", unreachable)
+        seed = int(f'{self.which_roi}{self.which_gm:03}{self.index:02}')
+        self.p = self.prob.fractured_propagation(seed)
 
 
     def cost_func_w_alps(self, norm, alpha, beta):
@@ -159,62 +171,38 @@ class Janitor:
     def fit(self):
         '''Does the fitting stuff to get the new parameters of photon survival prob * logparabola.
         '''
-        # self.gen_probs()
-        if self.rerun:
-            self.temp = np.zeros((1, 3), dtype=float)
-            self.temp[0, 0] = - self.gta.like()
+        if not self.load_probs:
+            self.gen_probs()
         else:
-            self.reload_like[self.index - start] = - self.gta.like()
+            pass
+        self.reload_like = - self.gta.like()
         m = Minuit(self.cost_func_w_alps, errordef=0.5, norm=self.norm, alpha=self.alpha, beta=self.beta,\
                    error_norm=self.norm_err, error_alpha=self.alpha_err, error_beta=self.beta_err, print_level=1)
         # m.tol = 5
         res = m.migrad()
         self.res.append(res)
-        if self.rerun:
-            self.temp[0, 1] = - self.gta.like()
-        else:
-            self.ll_minuit[self.index - start] = - self.gta.like()
+        self.ll_minuit = - self.gta.like()
         self.gta.free_sources(free=False)
         self.gta.free_source(self.name)
         self.gta.free_source('galdiff')
         self.gta.free_source('isodiff')
-        o = gta.fit(optimizer='NEWMINUIT', reoptimize=True)
-        if rerun:
-            self.temp[0, 2] = - self.gta.like()
-
-        else:
-            self.ll_fit[self.index - start] = - self.gta.like()
+        o = self.gta.fit(optimizer='NEWMINUIT', reoptimize=True)
+        self.ll_fit = - self.gta.like()
 
 
     def write_outdata(self):
         '''Write outdata to some specified filepath in a specified location. Differs between rerun and initial run.
         '''
-        if self.rerun:
-            save_data = np.loadtxt(f'{loglike_dir}/out_{which_gm:03}.dat')
-            save_data[self.index] = self.temp
-            np.savetxt(f'{loglike_dir}/out_{which_gm:03}.dat', save_data, fmt="%5.4f")
-            del self.temp
-        else:
-            for c, v in enumerate(self.res):
-                try:
-                    self.outdata[c, 1] = self.ll_minuit[c]
-                except:
-                    self.outdata[c, 1] = 0
-                try:
-                    self.outdata[c, 0] = self.reload_like[c]
-                except:
-                    self.outdata[c, 0] = 0
-                try:
-                    self.outdata[c, 2] = self.ll_fit[c]
-                except:
-                    self.outdata[c, 2] = 0
-            try:
-                save_data = np.loadtxt(f'{loglike_dir}/out_{which_gm:03}.dat')
-            except:
-                save_data = np.zeros((100, 3))
-            save_data[nsim*which_range:nsim*(which_range+1)] = self.outdata    
-            np.savetxt(f'{loglike_dir}/out_{which_gm:03}.dat', save_data, fmt='%5.4f', \
-                       header=f'init minuit fit, nplike: {self.nplike:5.4f}, loaded like: {self.init_like:5.4f}')
+        self.outdata[0, 0] = self.reload_like
+        self.outdata[0, 1] = self.ll_minuit
+        self.outdata[0, 2] = self.ll_fit
+        try:
+            save_data = np.loadtxt(self.save_path)
+        except IOError:
+            save_data = np.zeros((100, 3), dtype=float)
+        save_data[self.index] = self.outdata
+        header=f'init minuit fit, nplike: {self.nplike:5.4f}'
+        np.savetxt(self.save_path, save_data, fmt="%5.4f", header=header)
 
 
 

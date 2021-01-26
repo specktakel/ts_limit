@@ -32,13 +32,17 @@ source = config['selection']['target']
 with open(cwd+'/config_modified.yaml', 'w') as o:
     yaml.dump(config, o)
 
-
-# sys.exit()
+if os.path.isdir(f'{workdir}'):
+    print('dir and roi already exists, exiting')
+    sys.exit()
+else:
+    pass
 if 'n1/kuhlmann' in cwd:
     try:
         os.mkdir(workdir)
     except FileExistsError:
         print('output directory already exists')
+        sys.exit()
     roi_path = workdir
     print(roi_path)
     files = os.listdir(master_loc)
@@ -57,14 +61,18 @@ gta.free_sources(free=False)
 gta.simulate_roi()
 for j in range(5):
     gta.optimize()
-print("loglike of saved roi", -gta.like())
-gta.write_roi(f'sim_{input_arg}')
+# print("loglike of saved roi", -gta.like())
+# gta.write_roi(f'sim_{input_arg}')
 gta.free_source(source)
-gta.fit(optimizer='NEWMINUIT', reoptimize=True)
-gta.free_source(source, free=False)
-gta.free_source(source, pars='norm')
+# gta.fit(optimizer='NEWMINUIT', reoptimize=True)
+# gta.free_source(source, free=False)
+# gta.free_source(source, pars='norm')
 gta.free_source('isodiff')
 gta.free_source('galdiff')
+gta.free_sources(distance=3.0, pars='norm')
+gta.free_sources(minmax_ts=[100, None], pars='norm')
 gta.fit(optimizer='NEWMINUIT', reoptimize=True)
+gta.write_roi(f'sim_{input_arg}')
 like = np.array([-gta.like()])
+print(-gta.like())
 np.savetxt(like_save_path, like)
