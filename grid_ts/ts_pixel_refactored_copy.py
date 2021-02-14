@@ -1,13 +1,12 @@
 from ts_limit.grid_ts.janitor_copy import Janitor
-import numpy as np
+
 import os
 import sys
 import shutil
 import psutil
-import time
-start_time = time.time()
+import numpy as np
 process = psutil.Process(os.getpid())
-nsim = 100
+nsim = 25
 
 '''Get needed values from CLI.'''
 which_gm = int(sys.argv[1])
@@ -17,19 +16,18 @@ which_range = int(sys.argv[3])
 '''If rerunning some args, notice this and handle things differently. This concerns, e.g., indices of simulations to be done.'''
 try:
     num = int(sys.argv[4])
-    rerun = True 
-    print('rerunning some args') 
+    rerun = True  
 except IndexError:
     rerun = False
 
 
 '''Set up all necessary paths and directories.'''
 path_dict = {}
+cwd = os.getcwd()
 package_path = '/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit'
 prob_path = f'{package_path}/grid_survival_prob/new_probs/roi_{which_roi}/prob_{which_gm:03}.dat'
 save_dir = f'{package_path}/grid_ts/outdata/roi_{which_roi}'
 save_path = f'{save_dir}/out_{which_gm:03}.dat'
-cwd = os.getcwd()
 '''Need to check if this is running on the cluster or astro-wgs.'''
 if not 'n1/kuhlmann' in cwd:
     print('Im running on the cluster')
@@ -45,7 +43,7 @@ else:
     print(f'should copy from {roi_origin} to {roi_dir}')
     files = os.listdir(roi_origin)
     for f in files:
-        shutil.copy2(f'{roi_origin}/{f}', f'{roi_dir}')     # should overwrite any files present, clean up afterwards anyway...
+        # shutil.copy2(f'{roi_origin}/{f}', f'{roi_dir}')     # should overwrite any files present, clean up afterwards anyway...
         continue
 roi_file = f'{roi_dir}/sim_{which_roi}.npy'
 
@@ -81,7 +79,7 @@ if rerun:
     except FileNotFoundError:
         print("file has wrong shape or is not found")
         data = np.zeros((100, 3), dtype=float)
-        np.savetxt(f"{save_dir}/out_{which_gm:03}.dat", data)
+        np.savetxt(f"/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/roi_tempdir/out_old_fit.dat", data)
         start = which_range * nsim
         end = (which_range + 1) * nsim
         indices = [i for i in range(start, end)]
@@ -102,11 +100,6 @@ for i in indices:
     obj.fit()
     print('memory used:', process.memory_info().rss * 1e-6)
     obj.write_outdata()
-    current_time = time.time()
-    if current_time - start_time > 10500:
-        sys.exit()
-    else:
-        pass 
     if i != indices[-1]:
         obj.bootleg_reload()
     else:
