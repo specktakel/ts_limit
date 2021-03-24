@@ -1,5 +1,7 @@
 data: 
   evfile: 'events.lst'
+  scfile: /nfs/astrop/n1/kuhlmann/NGC_1275/raw_data_roi_15/L2009090432059398E3A906_SC00.fits
+
 binning:
   roiwidth: 10.0
   binsz: 0.2

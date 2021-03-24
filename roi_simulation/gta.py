@@ -20,6 +20,7 @@ source = config['selection']['target']
 
 with open(cwd+'/config_modified.yaml', 'w') as o:
     yaml.dump(config, o)
+'''
 prefix = 'simulation_base'
 gta = GTAnalysis('config_modified.yaml', logging={'verbosity' : 4},\
 		 model={'galdiff': path_to_conda+'/share/fermitools/refdata/fermi/galdiffuse/gll_iem_v07.fits', \
@@ -51,4 +52,4 @@ fit_result = gta.fit(optimizer='NEWMINUIT', reoptimize=True)
 gta.write_roi(prefix+'_roi')
 gta.write_roi(cwd+'/fits/base.npy')
 sed = gta.sed('4FGL J0319.8+4130', make_plots=True, prefix=prefix, free_background=False)
-
+'''

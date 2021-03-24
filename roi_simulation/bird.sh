@@ -33,8 +33,8 @@ conda info --base
 echo "conda path"
 echo "$CONDA_PREFIX"
 echo "Copying needed files..."
-cp -r /nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/roi_simulation/fits .
+cp -r /nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/roi_simulation/fits_01 .
 echo "STARTING THE PYTHON SCRIPT with argument:"
 echo $1
 python /nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/roi_simulation/simulate_roi.py $1
-
+mv fits_01 /nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/roi_simulation/roi_files/roi_$1

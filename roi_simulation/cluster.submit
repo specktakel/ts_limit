@@ -1,16 +1,18 @@
 initialdir              = /nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/roi_simulation
 executable              = /nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/roi_simulation/bird.sh
-arguments               = $(ProcId) 
-log                     = log/small$(ProcId).log
-output                  = out/small$(ProcId).out
-error                   = err/small$(ProcId).err
+arguments               = $(roi) 
+log                     = log/cluster$(roi).log
+output                  = out/cluster$(roi).out
+error                   = err/cluster$(roi).err
 should_transfer_files   = YES
 transfer_input_files    = events.lst, config_local.yaml
 when_to_transfer_output = ON_EXIT
+transfer_output_files   = ""
 request_cpus            = 1
 request_disk            = 2GB
 request_memory          = 2GB
 # request_runtime         = 18000
 notification            = Error
 notify_user             = julian.kuhlmann@desy.de
-queue 10
+queue roi from submit_this.txt
+# queue 5
