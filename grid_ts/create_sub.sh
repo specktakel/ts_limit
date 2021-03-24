@@ -1,5 +1,5 @@
 #!/bin/bash
-for i in {421..425}
+for i in {610..619}
 do
   mkdir roi_err/roi_$i
   mkdir roi_out/roi_$i

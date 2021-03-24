@@ -64,6 +64,7 @@ class Janitor:
         self.gta.free_source(self.name)
         self.src_model = self.gta.get_src_model(self.name)
         self.init_like = - self.gta.like()
+        self.get_init_vals()
         self.gta.set_source_spectrum(self.name, spectrum_type='FileFunction')
         self.logEMeV, self.init_dnde = self.gta.get_source_dnde(self.name)
         self.EMeV = np.power(10., self.logEMeV)
@@ -77,6 +78,7 @@ class Janitor:
         self.res = []
         dat = np.load(self.roi_file, allow_pickle=True).flat[0]
         self.nplike = dat['roi']['loglike']
+
 
     def write_yaml_config(self):
         roi_dir = self.roi_dir
@@ -103,13 +105,14 @@ class Janitor:
         Returns: differential flux dN/dE
         '''
 
-        dnde = norm * 1.0e-11 * np.power((x / self.Eb) , -(alpha + beta * 1.0e-1 * np.log((x / self.Eb))))
+        dnde = norm * np.power((x / self.Eb) , -(alpha + beta * np.log((x / self.Eb))))
         return dnde
 
     
     def survival_logparabola(self, en, norm, alpha, beta):
         '''Multiplies survival probability of a photon at given energy E with the logparabola spectrum.
         Returns: differential flux dN/dE = P(gamma->gamma) * logparabola
+        Uses only the first entry of self.p, so for reading in probs this will always use the first set of probabilities!
         '''
 
         dnde = self.log_parabola(en, norm, alpha, beta)
@@ -139,7 +142,7 @@ class Janitor:
         '''Cost function used for fitting of spectrum with ALPs.
         Returns: loglike (<0).
         '''
-        print(norm, alpha, beta)
+        print(norm, alpha, beta, self.Eb)
         dnde = self.survival_logparabola(self.EMeV, norm, alpha, beta)
         self.gta.set_source_dnde(self.name, dnde)
         like = self.gta.like()
@@ -150,22 +153,51 @@ class Janitor:
         '''Get values from logparabola-fitted model,
         multiplied by "scale" from model.xml file.
         '''
-
-        self.norm = self.src_model['param_values'][0] * 1.0e11
+        
+        self.norm = self.src_model['param_values'][0]
         self.alpha = self.src_model['param_values'][1]
-        self.beta = self.src_model['param_values'][2] * 1.0e1
-        self.norm_err = self.src_model['param_errors'][0] * 1.0e11
-        self.alpha_err = self.src_model['param_errors'][1]
-        self.beta_err = self.src_model['param_errors'][2] * 1.0e1
-        self.Eb = self.src_model['param_values'][3]
-
+        self.beta = self.src_model['param_values'][2]
+        self.norm_err = self.norm * 0.05
+        self.alpha_err = self.alpha * 0.05
+        self.beta_err = self.beta * 0.05
+        self.Eb = self.src_model['param_values'][3] 
+        print(self.norm, self.norm_err)
+        print(self.alpha, self.alpha_err)
+        print(self.beta, self.beta_err)
+        print(self.Eb)
+        _sources = self.gta.get_sources()
+        self.sources = {}
+        for src in _sources:
+            self.sources[src.name] = src.params.copy()
+        '''
+        self.norm = self.sources[self.name]['norm']['value']
+        self.alpha = self.sources[self.name]['alpha']['value']
+        self.beta = self.sources[self.name]['beta']['value']
+        self.norm_err = self.sources[self.name]['norm']['error']
+        self.alpha_err = self.sources[self.name]['alpha']['error']
+        self.beta_err = self.sources[self.name]['beta']['error']
+        self.Eb = self.sources[self.name]['Eb']['value']
+        '''
 
     def reload_gta(self):
         self.gta.load_roi(self.roi_file)
         self.gta.free_sources(free=False)
         self.gta.free_source(self.name)
         self.gta.set_source_spectrum(self.name, spectrum_type='FileFunction')
-            
+
+
+    def bootleg_reload(self):
+        self.gta.free_sources(free=False)
+        self.gta.set_source_spectrum(self.name, spectrum_type='LogParabola', spectrum_pars=self.src_model['spectral_pars'])
+        for k, v in self.sources.items():
+            for param, param_dict in v.items():
+                try:
+                    self.gta.set_parameter(k, param, param_dict['value'], error=param_dict['error'])
+                except:
+                    pass
+        print('reload like:', -self.gta.like())
+        print('init like:', self.init_like)
+        self.gta.set_source_spectrum(self.name, spectrum_type='FileFunction')
 
 
     def fit(self):
@@ -201,7 +233,7 @@ class Janitor:
         except IOError:
             save_data = np.zeros((100, 3), dtype=float)
         save_data[self.index] = self.outdata
-        header=f'init minuit fit, nplike: {self.nplike:5.4f}'
+        header=f'init minuit fit, nplike: {self.nplike:5.4f}, initlike: {self.init_like:5.4f}'
         np.savetxt(self.save_path, save_data, fmt="%5.4f", header=header)
 
 

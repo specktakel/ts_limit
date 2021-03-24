@@ -116,7 +116,8 @@ for line in missing_lines:
         
 missing_args = np.array(missing_lines)
 np.savetxt(f'roi_{which_roi}/missing_args.txt', np.array(missing_gm), fmt="%1.1i")
-# sys.exit()
+print(np.max(likes))
+sys.exit()
 
 '''
 # sys.exit()
@@ -156,7 +157,19 @@ for fi in data_list:
     likes[num] = ts[94]
     #break
 '''
+print(np.max(likes))
+try:
+    ts_values = np.loadtxt('ts/ts.dat')
+    ts_values = ts_values.reshape((int(ts_values.flatten().shape[0] / 2), 2))
+    ts_values = np.append(ts_values, np.array([[which_roi, np.max(likes)]]), axis=0)
+except IOError:
+    ts_values = np.array([[which_roi, np.max(likes)]])
+    ts_values = ts_values.reshape(1, 2)
+print(ts_values.shape)
+np.savetxt('ts/ts.dat', ts_values, fmt="%1.1i %1.3f")
 # sys.exit()
+
+
 likes = likes.reshape((30, 30))
 g_space = np.logspace(-1., 2., num=30, base=10.0, endpoint=True)    # in 1e-11 1/GeV
 m_space = np.logspace(-1., 2., num=30, base=10.0, endpoint=True)    # in neV
@@ -172,7 +185,7 @@ yv = yv.reshape((900))
 
 #ts_plot = ts_plot.reshape((30, 30))
 #ts_plot[29, 29] = -200
-#print(ts_plot)
+## print(ts_plot)
 # ts_plot = np.random.uniform(low=-210, high=210, size=(30, 30))
 fig = plt.figure(1, figsize=(10, 7), dpi=150)
 cmap = plt.get_cmap('seismic')
@@ -225,6 +238,6 @@ ax.set_yscale('log')
 fig.subplots_adjust(hspace=0)
 fig.patch.set_facecolor('white')
 fig.tight_layout(pad=2, h_pad=1.5, w_pad=2)
-#fig.subplots_adjust(hspace=0.5)
+# fig.subplots_adjust(hspace=0.5)
 fig.savefig(f'/afs/desy.de/user/k/kuhlmjul/NGC_1275/maps/ts_fixed_{which_roi}.png', dpi=150, bbox_inches='tight')
 fig.savefig(f'colormaps/ts_fixed_{which_roi}.png', dpi=150, bbox_inches='tight')

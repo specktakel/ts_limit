@@ -23,7 +23,8 @@ unset __conda_setup
 int=60
 
 
-timer=$(($(($1 % $int ))*3))
+# timer=$(($(($1 % $int ))*3))
+timer=$(($1 % $int ))
 echo "sleeping for $timer"
 sleep $timer
 # sleep 60
@@ -33,9 +34,9 @@ conda info --base
 echo "conda path"
 echo "$CONDA_PREFIX"
 echo "Copying needed files..."
-cp -r /nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/grid_ts/fits .
+# cp -r /nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/roi_simulation/fits_01 .
 cp -r /nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/roi_simulation/roi_files/roi_$2 .
 echo "STARTING THE PYTHON SCRIPT with arguments:"
 echo $1 $2 $3
-python /nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/grid_ts/ts_pixelv2_mock.py $1 $2 $3
+python /nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/grid_ts/ts_pixel_refactored.py $1 $2 $3
 

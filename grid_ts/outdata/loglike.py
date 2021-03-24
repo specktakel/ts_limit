@@ -71,12 +71,12 @@ def check_files(directory, which_roi, prefix='out_', postfix='.dat'):
         except IOError:
             print(f'file {n} is missing')
             missing_lines.append([n[0], 0])
-            missing_lines.append([n[0], 25])
-            missing_lines.append([n[0], 50])
-            missing_lines.append([n[0], 75]) 
+            # missing_lines.append([n[0], 25])
+            # missing_lines.append([n[0], 50])
+            # missing_lines.append([n[0], 75]) 
     missing_gm = []
     for line in missing_lines:
-        arg = [line[0], which_roi, floor(line[1] / 25)]
+        arg = [line[0], which_roi, 0]
         if arg not in missing_gm:
             missing_gm.append(arg)
     np.savetxt(f'{directory}/missing_args.txt', np.array(missing_gm), fmt="%1.1i")
@@ -102,7 +102,7 @@ def write_ts(likes, which_roi):
 
 def plot_data(likes, which_roi, local_save_dir, afs_save_dir):
     likes = likes.reshape(30, 30)
-    fig = plt.figure(1, figsize=(10, 7), dpi=150)
+    fig = plt.figure(1, dpi=150)
     cmap = plt.get_cmap('seismic')
     levels = MaxNLocator(nbins=cmap.N).tick_values(-40, 40)
     ax = fig.add_subplot(111)
@@ -120,13 +120,21 @@ def plot_data(likes, which_roi, local_save_dir, afs_save_dir):
     grid = grid.reshape((m_space.shape[0] * g_space.shape[0], 2))
     xmin, xmax, ymin, ymax = 0.3, 30.0, 0.3, 7.0
     pcol = ax.pcolor(x, y, likes, cmap=cmap, norm=norm, alpha=1)
-    fig.colorbar(pcol, ax=ax, extend='neither', ticks=(-40, -20, -10, -5, 0, 5, 10, 20, 40), \
+    cb = fig.colorbar(pcol, ax=ax, extend='neither', ticks=(-40, -20, -10, -5, 0, 5, 10, 20, 40), \
                  label='TS')
+    ticklabels = cb.ax.get_yticklabels()
+    cb.ax.set_yticklabels(ticklabels, ha='right')
+    cb.ax.yaxis.set_tick_params(pad=20)
     ax.set_xlim((np.power(10, -1 - dx_2), np.power(10, 2+dx_2)))
     ax.set_ylim((np.power(10, -1 - dx_2), np.power(10, 2+dx_2)))
     ax.set_xlabel('$m_{a}$ [neV]')
     ax.set_ylabel('$g_{a\gamma\gamma}$ [$10^{-11}$ GeV$^{-1}$]')
-    ax.set_xticks((1e-1, 1e0, 1e1, 1e2))
+    ax.set_xticks([1e-1, 1e0, 1e1, 1e2])
+    ax.set_xticklabels([r'$10^{-1}$', r'$10^{0}$', r'$10^{1}$', r'$10^{2}$'], ha='left')
+
+    ax.set_yticks([1e-1, 1e0, 1e1, 1e2])
+    ax.set_yticklabels([r'$10^{-1}$', r'$10^{0}$', r'$10^{1}$', r'$10^{2}$'], ha='left')
+    ax.yaxis.set_tick_params(pad=20)
     ax.set_xscale('log')
     ax.set_yscale('log')
     fig.subplots_adjust(hspace=0)

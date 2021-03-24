@@ -1,4 +1,4 @@
-from ts_limit.grid_ts.janitor_copy import Janitor
+from ts_limit.grid_ts.janitor import Janitor
 import numpy as np
 import os
 import sys
