@@ -7,14 +7,27 @@ import psutil
 import time
 start_time = time.time()
 process = psutil.Process(os.getpid())
-nsim = 100
+nsim = 3
+
 
 '''Get needed values from CLI.'''
-which_gm = int(sys.argv[1])
-which_roi = int(sys.argv[2])
+try:
+    which_gm = int(sys.argv[1])
+except ValueError:
+    print('gm not a number, exiting')
+    sys.exit()
+
+try:
+    which_roi = int(sys.argv[2])
+    roi_name = f'roi_{which_roi}'
+except ValueError:
+    print('roi not a number, use instead str')
+    roi_name = sys.argv[2]
+
 which_range = int(sys.argv[3])
 
-'''If rerunning some args, notice this and handle things differently. This concerns, e.g., indices of simulations to be done.'''
+
+'''If rerunning some args, catch this and handle things differently. This concerns, e.g., indices of simulations to be done.'''
 try:
     num = int(sys.argv[4])
     rerun = True 
@@ -26,28 +39,36 @@ except IndexError:
 '''Set up all necessary paths and directories.'''
 path_dict = {}
 package_path = '/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit'
-prob_path = f'{package_path}/grid_survival_prob/new_probs/roi_{which_roi}/prob_{which_gm:03}.dat'
-save_dir = f'{package_path}/grid_ts/outdata/roi_{which_roi}'
+#prob_path subject to deletion
+prob_path = f'{package_path}/grid_survival_prob/new_probs/roi_name/prob_{which_gm:03}.dat'
+save_dir = f'{package_path}/grid_ts/outdata/{roi_name}'
 save_path = f'{save_dir}/out_{which_gm:03}.dat'
 cwd = os.getcwd()
+
 '''Need to check if this is running on the cluster or astro-wgs.'''
 if not 'n1/kuhlmann' in cwd:
     print('Im running on the cluster')
-    roi_dir = f'{cwd}/roi_{which_roi}'
+    roi_dir = f'{cwd}/{roi_name}'
 else:
     print('Im running on the wgs')
     roi_dir = f'{package_path}/grid_ts/roi_tempdir'
-    roi_origin = f'{package_path}/roi_simulation/roi_files/roi_{which_roi}'
+    roi_origin = f'{package_path}/grid_ts/{roi_name}'
+
     try:
         os.mkdir(f'{roi_dir}')
     except FileExistsError:
         print('temp directory exists')
+
     print(f'should copy from {roi_origin} to {roi_dir}')
     files = os.listdir(roi_origin)
     for f in files:
-        shutil.copy2(f'{roi_origin}/{f}', f'{roi_dir}')     # should overwrite any files present, clean up afterwards anyway...
+        # shutil.copy2(f'{roi_origin}/{f}', f'{roi_dir}')     # should overwrite any files present, clean up afterwards anyway...
         continue
-roi_file = f'{roi_dir}/sim_{which_roi}.npy'
+
+try:
+    roi_file = f'{roi_dir}/sim_{which_roi}.npy'
+except NameError:
+    roi_file = f'{roi_dir}/edisp_-2.npy'
 
 path_dict['prob_path'] = prob_path
 path_dict['save_dir'] = save_dir
@@ -57,7 +78,7 @@ path_dict['roi_dir'] = roi_dir
 path_dict['roi_file'] = roi_file
 path_dict['package_path'] = package_path
 path_dict['roi_file'] = roi_file
-path_dict['config_path'] = f'{cwd}/config_modified.yaml'
+path_dict['config_path'] = f'{roi_dir}/config_modified.yaml'
 
 '''Create output paths if necessary.'''
 try:
@@ -66,7 +87,7 @@ try:
 except FileExistsError:
     print(f'output path already exists, continuing...')
 print(f'cwd: {cwd}')
-
+print(path_dict)
 
 if rerun:
     try:
@@ -93,7 +114,7 @@ print(path_dict)
 print(indices)
 # sys.exit()
 print('memory pre fermipy:', process.memory_info().rss * 1e-6)
-obj = Janitor(which_gm, which_roi, which_range, path_dict, load_probs=False)
+obj = Janitor(which_gm, 69, which_range, path_dict)
 print('memory post fermipy:', process.memory_info().rss * 1e-6)
 
 
@@ -102,6 +123,8 @@ for i in indices:
     obj.fit()
     print('memory used:', process.memory_info().rss * 1e-6)
     obj.write_outdata()
+    '''Check if roughly enough time for the next fit remains.
+    Cluster limit is at 3 hours. One fit takes approx. 2-5 minutes.'''
     current_time = time.time()
     if current_time - start_time > 10500:
         sys.exit()

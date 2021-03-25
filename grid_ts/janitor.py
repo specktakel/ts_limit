@@ -6,6 +6,7 @@ import numpy as np
 from fermipy.gtanalysis import GTAnalysis
 import psutil
 process = psutil.Process(os.getpid())
+
 '''Class that handles the grid analysis, e.g. selection of g/m, fitting, data handling.
 '''
 
@@ -13,10 +14,14 @@ class Janitor:
     '''Because janitors do the work.
     '''
 
-    def __init__(self, which_gm, which_roi, which_range, paths, load_probs=True):
+    def __init__(self, which_gm, which_roi, which_range, paths, load_probs=False, use_weights=False, index=-2):
         self.which_gm = which_gm
+        # which_roi is part of random seed generation,
+        # need to pick some value in wrapper still
         self.which_roi = which_roi
         self.which_range = which_range
+        self.use_weights = use_weights
+        self.index = index
         self.path_dict = paths
         self.set_up_paths()
         self.write_yaml_config()
@@ -25,10 +30,14 @@ class Janitor:
         self.set_up_roi()
         self.load_probs = load_probs
         if not self.load_probs:
-            from ts_limit.grid_survival_prob.probs import Probs
-            self.prob = Probs(self.logEMeV, self.g, self.m)
+            self.init_probs()
         else:
             self.read_probs()
+
+
+    def init_probs(self):
+        from ts_limit.grid_survival_prob.probs import Probs
+        self.prob = Probs(self.logEMeV, self.g, self.m)
 
 
     def find_gm(self, which_gm):
@@ -48,7 +57,7 @@ class Janitor:
     def set_up_paths(self):
         self.save_path = self.path_dict['save_path']
         self.save_dir = self.path_dict['save_dir']
-        self.prob_path = self.path_dict['prob_path']
+        self.prob_path = self.path_dict.get('prob_path')
         self.roi_file = self.path_dict['roi_file']
         self.roi_dir = self.path_dict['roi_dir']
         self.package_path = self.path_dict['package_path']
@@ -70,6 +79,7 @@ class Janitor:
         self.EMeV = np.power(10., self.logEMeV)
         self.get_init_vals()
 
+
     def init_arrays(self): 
         self.outdata = np.zeros((1, 3), dtype=float)
         self.ll_minuit = np.zeros((1), dtype=float)
@@ -84,7 +94,7 @@ class Janitor:
         roi_dir = self.roi_dir
         path_to_conda = os.environ['CONDA_PREFIX']
         cwd = os.getcwd()
-        with open(f'{cwd}/config_local.yaml', 'r') as i:
+        with open(f'{self.config_path}', 'r') as i:
             config = yaml.safe_load(i)
 
         config['fileio']['workdir'] =  f'{roi_dir}'
@@ -95,9 +105,9 @@ class Janitor:
         config['model']['isodiff'] = f'{path_to_conda}/share/fermitools/refdata/fermi/galdiffuse/iso_P8R3_SOURCE_V3_v1.txt'
         config['logging']['verbosity'] = 4
         self.name = config['selection']['target']
-        with open(f'{cwd}/config_modified.yaml', 'w') as o:
+        with open(f'{roi_dir}/config_modified.yaml', 'w') as o:
             yaml.dump(config, o)
-        self.config_path = 'config_modified.yaml'
+        self.config_path = f'{roi_dir}/config_modified.yaml'
 
 
     def log_parabola(self, x, norm, alpha, beta):
@@ -135,7 +145,8 @@ class Janitor:
         '''Generates probabilities on the fly.
         '''
         seed = int(f'{self.which_roi}{self.which_gm:03}{self.index:02}')
-        self.p = self.prob.fractured_propagation(seed)
+        self.p = self.prob.fractured_propagation(seed, weights=self.use_weights, index=self.index)
+        # np.savetxt(f'{self.save_dir}/p_{seed}_energy_weight.dat', self.p)
 
 
     def cost_func_w_alps(self, norm, alpha, beta):
@@ -213,6 +224,10 @@ class Janitor:
         # m.tol = 5
         res = m.migrad()
         self.res.append(res)
+        print(self.gta.like())
+        prelim_dnde = self.survival_logparabola(self.EMeV, m.values['norm'], m.values['alpha'], m.values['beta'])
+        self.gta.set_source_dnde(self.name, prelim_dnde)
+        print(self.gta.like())
         self.ll_minuit = - self.gta.like()
         self.gta.free_sources(free=False)
         self.gta.free_source(self.name)
@@ -235,7 +250,6 @@ class Janitor:
         save_data[self.index] = self.outdata
         header=f'init minuit fit, nplike: {self.nplike:5.4f}, initlike: {self.init_like:5.4f}'
         np.savetxt(self.save_path, save_data, fmt="%5.4f", header=header)
-
 
 
 if __name__ == "__main__":

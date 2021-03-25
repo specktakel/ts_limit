@@ -81,7 +81,7 @@ class Probs():
         p_gamma_x, p_gamma_y, p_gamma_a = self.mod.run()
         p_gamma_tot = p_gamma_x + p_gamma_y
         p_out = p_gamma_tot.reshape((self.nsim, self.nbins, self.ppb))
-        if use_weights:
+        if weights is not None:
             weights = np.zeros((self.nsim, self.EGeV.shape[0]))
             weights[:] = np.power(self.EGeV, index)
             weights = weights.reshape((self.nsim, self.nbins, self.ppb))
