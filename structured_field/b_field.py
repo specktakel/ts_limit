@@ -1,10 +1,18 @@
 import numpy as np
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
+import sys.exit
 
 
 class structured_field():
+    '''Class definition of structured magnetic field, see 1008.5353 and
+    1908.03084 for details.'''
+
+    '''alpha is lowest positive, non-zero root of
+    tan(alpha)=3alpha/(3-alpha**2). Put F_0 and norm here as well,
+    they do not depend on anything else.'''
     alpha = 5.7634591968
     F_0 = (alpha * np.cos(alpha) - np.sin(alpha)) * alpha**2
+    norm = np.sqrt((3 * F_0 + alpha**5)**2) * 2 / (3 * alpha**2)
 
     def __init__(self, B_0, R, theta, radians=False, cell_num=100):
         '''Norm in micro gauss, theta in degrees, if not specified.'''
@@ -15,13 +23,13 @@ class structured_field():
         print(self.theta)
         self.B_0 = B_0
         # Normalisation from \lim_{r\to 0}
-        self.c = self.B_0 / (np.sqrt((3 * self.F_0 + self.alpha**5)**2) * 2
-                             / (3 * self.alpha**2))
+        self.B_0 = self.B_0
         self.R = R
         self.cell_num = cell_num
         self.dL = R / cell_num
         self.r = self._get_r_points()
-        # self.get_dL()
+        # need to implement some other way to calculate dL when manual
+        # set of self.r is done.
         self.dL_vec = np.full(self.r.shape, self.dL)
 
     def _get_r_points(self):
@@ -42,25 +50,28 @@ class structured_field():
     def angle(self):
         return self._angle_b_trans(self.b_phi, self.b_theta)
 
+    '''@property (ies?...) return normalised and correctly scaled field values.
+    Dividing by normalisation at r=0 is done in private classmethods,
+    scaling done in property definitions.'''
     @property
     def b_r(self):
-        return self._b_r(self.r, self.theta)
+        return self.B_0 * self._b_r(self.r, self.theta)
 
     @property
     def b_phi(self):
-        return self._b_phi(self.r, self.theta)
+        return self.B_0 * self._b_phi(self.r, self.theta)
 
     @property
     def b_theta(self):
-        return self._b_theta(self.r, self.theta)
+        return self.B_0 * self._b_theta(self.r, self.theta)
 
     @property
     def b_par(self):
-        return self._b_par(self.r, self.theta)
+        return self.B_0 * self._b_par(self.r, self.theta)
 
     @property
     def b_trans(self):
-        return self._b_trans(self.r, self.theta)
+        return self.B_0 * self._b_trans(self.r, self.theta)
 
     @classmethod
     def _b_par(cls, r, theta):
@@ -80,7 +91,9 @@ class structured_field():
 
     '''Magnetic field expressions, see 1008.5353 and 1908.03084 for details.
     Field values at r=0 are evaluated seperately due the impossibility of
-    dividing by zero. Can be used for array, as well as integers.'''
+    dividing by zero. Can be used for array, as well as integers.
+    Carefull when calling from class, as there will be no normalisation done,
+    '''
     @classmethod
     def _b_r(cls, r, theta):
         zero_val = - np.cos(theta) * (6 * cls.F_0 + 2 * cls.alpha**5) \
@@ -94,7 +107,7 @@ class structured_field():
                 val = zero_val
         else:
             val = 2 * np.cos(theta) * cls._f(r) / r**2
-        return val
+        return val / cls.norm
 
     @classmethod
     def _b_theta(cls, r, theta):
@@ -109,7 +122,7 @@ class structured_field():
                 val = zero_val
         else:
             val = - np.sin(theta) * cls._f_prime(r) / r
-        return val
+        return val / cls.norm
 
     @classmethod
     def _b_phi(cls, r, theta):
@@ -123,10 +136,14 @@ class structured_field():
                 val = zero_val
         else:
             val = cls.alpha * np.sin(theta) * cls._f(r) / r
-        return val
+        return val / cls.norm
 
+    '''Unscaled versions of f, df/dr of referenced paper. Scaling done in
+    definitions of field values (properties and classmethods).'''
     @classmethod
     def _f(cls, r):
+        # should maybe include special case of r=0 here as well.
+        # on the other hand, never used explicitely. same with df/dr
         return cls.alpha * np.cos(cls.alpha * r) - \
                np.sin(cls.alpha * r) / r \
                - cls.F_0 * r**2 / cls.alpha**2
@@ -139,12 +156,17 @@ class structured_field():
                 - 2 * cls.F_0 * r / cls.alpha**2
 
 
+if __name__ == "__main__":
+    sys.exit()
+
+'''
 b = structured_field(8.3, 1, 225)
-plt.plot(b.r, b.c * b.b_r, label=r'$B_r$')
-#plt.plot(b.r, b.c * b.b_theta(b.r, b.theta), label=r'$B_\theta$')
-#plt.plot(b.r, b.c * b.b_phi(b.r, b.theta), label=r'$B_\phi$')
-#plt.plot(b.r, b._angle_b_trans(b._b_phi(b.r, b.theta), b._b_theta(b.r, b.theta)),
-#         label=r'$\psi=\frac{B_\phi}{B_\theta}$')
+plt.plot(b.r, b.b_r, label=r'$B_r$')
+plt.plot(b.r, b.b_theta, label=r'$B_\theta$')
+plt.plot(b.r, b.b_phi, label=r'$B_\phi$')
+plt.plot(b.r, b._angle_b_trans(b._b_phi(b.r, b.theta), b._b_theta(b.r, b.theta)),
+         label=r'$\psi=\frac{B_\phi}{B_\theta}$')
 #plt.plot(b.r, b.c * b._b_trans(b.r, b.theta), label=r'$B_{\text{trans}}$')
 # plt.plot(b.c * b._b_theta(b.r, b.theta), b.c * b._b_phi(b.r, b.theta))
 plt.legend()
+'''
