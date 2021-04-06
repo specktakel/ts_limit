@@ -1,6 +1,5 @@
 import numpy as np
-# import matplotlib.pyplot as plt
-import sys.exit
+import sys
 
 
 class structured_field():
@@ -25,26 +24,33 @@ class structured_field():
         # Normalisation from \lim_{r\to 0}
         self.B_0 = self.B_0
         self.R = R
+        self._r_scale = 1 / self.R
         self.cell_num = cell_num
         self.dL = R / cell_num
         self.r = self._get_r_points()
-        # need to implement some other way to calculate dL when manual
+        # TODO: need to implement some other way to calculate dL when manual
         # set of self.r is done.
         self.dL_vec = np.full(self.r.shape, self.dL)
 
     def _get_r_points(self):
         return np.linspace(self.dL / 2, self.R - self.dL / 2, self.cell_num)
 
+    '''r needs to be rescaled in field strength expressions to be smaller
+    than one. this is done here. calling b.r multiplies with R, setting divides
+    by R.'''
     @property
     def r(self):
-        return self._r
+        return self._r * self.R
 
     @r.setter
     def r(self, val=None):
         if val is None:
-            self._r = self._get_r_points()
+            self._r = self._get_r_points() / self.R
         else:
-            self._r = val
+            if np.max(val) > self.R:
+                raise ValueError('You cannot choose r_i > R')
+            else:
+                self._r = val / self.R
 
     @property
     def angle(self):
@@ -55,23 +61,23 @@ class structured_field():
     scaling done in property definitions.'''
     @property
     def b_r(self):
-        return self.B_0 * self._b_r(self.r, self.theta)
+        return self.B_0 * self._b_r(self._r, self.theta)
 
     @property
     def b_phi(self):
-        return self.B_0 * self._b_phi(self.r, self.theta)
+        return self.B_0 * self._b_phi(self._r, self.theta)
 
     @property
     def b_theta(self):
-        return self.B_0 * self._b_theta(self.r, self.theta)
+        return self.B_0 * self._b_theta(self._r, self.theta)
 
     @property
     def b_par(self):
-        return self.B_0 * self._b_par(self.r, self.theta)
+        return self.B_0 * self._b_par(self._r, self.theta)
 
     @property
     def b_trans(self):
-        return self.B_0 * self._b_trans(self.r, self.theta)
+        return self.B_0 * self._b_trans(self._r, self.theta)
 
     @classmethod
     def _b_par(cls, r, theta):
@@ -158,15 +164,3 @@ class structured_field():
 
 if __name__ == "__main__":
     sys.exit()
-
-'''
-b = structured_field(8.3, 1, 225)
-plt.plot(b.r, b.b_r, label=r'$B_r$')
-plt.plot(b.r, b.b_theta, label=r'$B_\theta$')
-plt.plot(b.r, b.b_phi, label=r'$B_\phi$')
-plt.plot(b.r, b._angle_b_trans(b._b_phi(b.r, b.theta), b._b_theta(b.r, b.theta)),
-         label=r'$\psi=\frac{B_\phi}{B_\theta}$')
-#plt.plot(b.r, b.c * b._b_trans(b.r, b.theta), label=r'$B_{\text{trans}}$')
-# plt.plot(b.c * b._b_theta(b.r, b.theta), b.c * b._b_phi(b.r, b.theta))
-plt.legend()
-'''
