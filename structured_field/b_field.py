@@ -1,5 +1,6 @@
 import numpy as np
 import sys
+from scipy.integrate import simpson as simp
 
 
 class structured_field():
@@ -46,12 +47,23 @@ class structured_field():
     @r.setter
     def r(self, val=None):
         if val is None:
+            print('Resetting radial points and dL_vec')
             self._r = self._get_r_points() / self.R
+            self.dL_vec = np.full(self.r.shape, self.dL)
         else:
             if np.max(val) > self.R:
                 raise ValueError('You cannot choose r_i > R')
             else:
+                # print('You need to manually set dL_vec!')
                 self._r = val / self.R
+
+    @property
+    def dL_vec(self):
+        return self._dL_vec
+
+    @dL_vec.setter
+    def dL_vec(self, val):
+        self._dL_vec = val
 
     @property
     def angle(self):
@@ -98,8 +110,9 @@ class structured_field():
 
     '''Magnetic field expressions, see 1008.5353 and 1908.03084 for details.
     Field values at r=0 are evaluated seperately due the impossibility of
-    dividing by zero. Can be used for array, as well as integers.
-    Carefull when calling from class, as there will be no normalisation done,
+    dividing by zero.
+    Can be used for array, as well as floats.
+    Carefull when calling from class, as there will be no normalisation done.
     '''
     @classmethod
     def _b_r(cls, r, theta):
@@ -161,6 +174,11 @@ class structured_field():
                 - cls.alpha * np.cos(cls.alpha * r) / r
                 + np.sin(cls.alpha * r) / r**2) \
                 - 2 * cls.F_0 * r / cls.alpha**2
+
+    def rotation_measure(self, nel):
+        '''Rotation measure (RM) = rad * m^-2 * 812 * integral nel * B dz,
+        nel in 1/cm^3, B in muGauss, z in kpc.'''
+        return 812 * simp(self.b_par * nel, self.r)
 
 
 if __name__ == "__main__":
