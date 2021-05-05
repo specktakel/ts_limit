@@ -20,6 +20,7 @@ class structured_field():
             self.theta = theta
         else:
             self.theta = np.radians(theta)
+            self._theta_ = theta
         print(self.theta)
         self.B_0 = B_0
         # Normalisation from \lim_{r\to 0}
