@@ -1,6 +1,6 @@
 import numpy as np
 import sys
-from scipy.integrate import simpson as simp
+from scipy.integrate import simps
 
 
 class structured_field():
@@ -14,7 +14,7 @@ class structured_field():
     F_0 = (alpha * np.cos(alpha) - np.sin(alpha)) * alpha**2
     norm = np.sqrt((3 * F_0 + alpha**5)**2) * 2 / (3 * alpha**2)
 
-    def __init__(self, B_0, R, theta, radians=False, cell_num=100):
+    def __init__(self, B_0, R, theta, radians=False, cell_num=100, **kwargs):
         '''Norm in micro gauss, theta in degrees, if not specified.'''
         if radians:
             self.theta = theta
@@ -120,7 +120,7 @@ class structured_field():
         if np.any(np.isclose(r, 0)):
             try:
                 zero_args = np.argwhere(np.isclose(r, 0))
-                val = 2 * np.cos(theta) * cls._f() / r**2
+                val = 2 * np.cos(theta) * cls._f(r) / r**2
                 val[zero_args] = zero_val
             except TypeError:
                 val = zero_val
@@ -135,7 +135,7 @@ class structured_field():
         if np.any(np.isclose(r, 0)):
             try:
                 zero_args = np.argwhere(np.isclose(r, 0))
-                val = - np.sin(theta) * cls._f_prime() / r
+                val = - np.sin(theta) * cls._f_prime(r) / r
                 val[zero_args] = zero_val
             except TypeError:
                 val = zero_val
@@ -177,7 +177,7 @@ class structured_field():
     def rotation_measure(self, nel):
         '''Rotation measure (RM) = rad * m^-2 * 812 * integral nel * B dz,
         nel in 1/cm^3, B in muGauss, z in kpc.'''
-        return 812 * simp(self.b_par * nel, self.r)
+        return 812 * simps(self.b_par * nel, self.r)
 
 
 if __name__ == "__main__":
