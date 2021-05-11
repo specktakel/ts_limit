@@ -150,7 +150,7 @@ class structured_field():
         if np.any(np.isclose(r, 0)):
             try:
                 zero_args = np.argwhere(np.isclose(r, 0))
-                val = cls.alpha * np.sin(theta) * cls.f(r) / r
+                val = cls.alpha * np.sin(theta) * cls._f(r) / r
                 val[zero_args] = zero_val
             except TypeError:
                 val = zero_val
