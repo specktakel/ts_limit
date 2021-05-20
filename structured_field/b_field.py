@@ -67,6 +67,7 @@ class structured_field():
 
     @property
     def angle(self):
+        '''See docstring of _angle_b_trans().'''
         return self._angle_b_trans(self.b_phi, self.b_theta)
 
     '''@property (ies?...) return normalised and correctly scaled field values.
@@ -104,8 +105,15 @@ class structured_field():
 
     @staticmethod
     def _angle_b_trans(b_phi, b_theta):
-        '''Calculates angle of transversal field component w.r.t.
-        theta direction (arbitrarily chosen). Returns angle in radians.'''
+        '''Calculates angle of transversal field component (psi).
+        Conforms to psi definition of gammaALPs. See definition of
+        Bs, Bt, Bu in GMF environs and trafo.py.
+        In this case, B_b = -B_theta, B_l = -B_phi,
+        b=galactic latitude, l=galactic longitude.
+        To rotate jet axis around LOS, add or subtract some angle.
+        Using the value of 1908 paper (PA=147° in galactic coordinates)
+        subtract np.radians(147) from resulting angle.
+        TODO: Include visualisation somewhere.'''
         return np.arctan2(-b_theta, -b_phi)
 
     '''Magnetic field expressions, see 1008.5353 and 1908.03084 for details.
