@@ -106,7 +106,7 @@ class structured_field():
     def _angle_b_trans(b_phi, b_theta):
         '''Calculates angle of transversal field component w.r.t.
         theta direction (arbitrarily chosen). Returns angle in radians.'''
-        return np.arctan2(b_phi, b_theta)
+        return np.arctan2(-b_theta, -b_phi)
 
     '''Magnetic field expressions, see 1008.5353 and 1908.03084 for details.
     Field values at r=0 are evaluated seperately due the impossibility of
