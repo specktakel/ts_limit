@@ -42,7 +42,7 @@ if args.theta: theta = args.theta
 if args.phi: phi = args.phi
 if args.pixels: num = args.pixels
 if args.sphere: sphere = args.sphere
-if args.save: savepath=args.save
+if args.save: savepath = args.save
 #sys.exit()
 #needed for Bfield definitions
 alpha = 5.7634591968
@@ -275,6 +275,8 @@ def make_map(num, R, B0, theta, phi, sphere):
         print(l_ind, u_ind)
         central_rm = 0
         for p in product((l_ind, u_ind), repeat=2):
+            #did i really take 10 minutes to look this up, just to avoid typing 4 lines?
+            #yes, i did.
             print(rm[p])
             central_rm += rm[p] / 4
     else:
@@ -284,7 +286,8 @@ def make_map(num, R, B0, theta, phi, sphere):
     textstr = ' '.join((f'central RM: {central_rm:.0f}', r'\SI{}{\radian\per\meter\squared}'))
     ax.text(0.05, 0.95, textstr, transform=ax.transAxes, fontsize=14,
         verticalalignment='top', bbox=props)
-    ax.scatter(x, np.zeros(x.shape))
+    if savepath:
+        fig.savefig(savepath)
     plt.show()
     return rm
 
