@@ -9,18 +9,38 @@ from shutil import copy2
 # start = int(sys.argv[1])
 start_time = time.time()
 
-simulation = True
-which_roi = int(sys.argv[1])
-if simulation:
-    roi_file_name = f'sim_{which_roi}.npy'
-    roi_location = f'/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/roi_simulation/roi_files/roi_{which_roi}'
-    roi_name = roi_location.rsplit('/', 1)[-1]
-else:
-    roi_location = '/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/roi_simulation/roi_files/fits_01'
-    roi_name = roi_location.rsplit('/', 1)[-1]
-    roi_file_name = 'fit_newminuit.npy'
-    outdir = '/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/structured_field/outdata/GMF_pshirkov_BSS_PA_-147'
+simulation = False
+try:
+    which_roi = int(sys.argv[2])
+except:
+    which_roi = False
 
+start = int(sys.argv[1])
+
+try:
+    print(sys.argv[3])
+    rerun = True
+except:
+    rerun = False
+
+if which_roi:
+    roi_file_name = f'sim_{which_roi}.npy'
+    roi_name = f'roi_{which_roi}'
+else:
+    roi_file_name = 'fit_newminuit.npy'
+    roi_name = 'fits_01'
+
+
+#not sure if this is actually correct
+if simulation:
+    roi_location = f'/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/roi_simulation/roi_files/roi_{which_roi}'
+else:
+    roi_location = f'/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/roi_simulation/roi_files/roi_{which_roi}'
+    # roi_name = roi_location.rsplit('/', 1)[-1]
+    if which_roi:
+        outdir = f'/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/structured_field/outdata/jansson12c/roi_{which_roi}'
+    else:
+        outdir = '/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/structured_field/outdata/jansson12c/orig_data'
 roi_destination = '/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/structured_field/roi_tempdir'
 
 
@@ -48,8 +68,18 @@ else:
 
 # sys.exit()
 ### get param_range or similar from command line args
-param_range = [i for i in range(650, 655)]
-prob_dir = '/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/grid_survival_prob/structured/no_ebl_gmf_pshirkov/'
+if not rerun:
+    param_range = [i for i in range(start*100, (start+1)*100)]
+else:
+    param_range = []
+    for i in range(900):
+        try:
+            np.loadtxt(f'{outdir}/gm_{i:03}.dat')
+        except:
+            param_range.append(i)
+print(param_range)
+# sys.exit()
+prob_dir = '/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/grid_survival_prob/structured_mod_g/b0_83'
 print(param_range)
 ##  sys.exit()
 
@@ -73,22 +103,20 @@ j = Janitor(gta)
 ### actual fitting in loop over param_range
 
 for i in param_range:
-    prob = np.loadtxt(f'{prob_dir}/gm{i}_theta_225_B0_8.3_PA_-147.dat')
+    prob = np.loadtxt(f'{prob_dir}/gm_{i}_jansson12c.dat')
     # or load probs module at the beginning and generate on the fly
     print(prob.shape)
     j.p = prob #['''some indexing probably required''']
     j.fit()
     j.prepare_outdata()
     # saving procedure here
-    np.savetxt(f'/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/structured_field/outdata/roi_{which_roi}/gm_{i:03}.dat', j.outdata, fmt='%5.4f') 
+    
+    np.savetxt(f'{outdir}/gm_{i:03}.dat', j.outdata, fmt='%5.4f') 
+    if not which_roi:
+        best_dnde = j.gta.get_source_dnde(j.name)
+        np.savetxt(f'/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/structured_field/outdata/jansson12c_dnde/gm_{i:03}.dat', best_dnde)
     if time.time() - start_time > 10500:
         break
     else:
         pass
-    if i != param_range[-1]:
-        j.bootleg_reload()
-        print(j.gta.like())
-        print(j.init_like)
-    else:
-        break
 

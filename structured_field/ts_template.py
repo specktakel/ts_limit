@@ -39,7 +39,7 @@ else:
 
 ### get param_range or similar from command line args
 param_range = [i for i in range(645, 650)]
-prob_dir = '/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/grid_survival_prob/structured/no_ebl_gmf_pshirkov/'
+prob_dir = '/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/grid_survival_prob/structured_mod_g'
 print(param_range)
 ##  sys.exit()
 
@@ -52,25 +52,26 @@ Janitor.write_yaml(config_path, f'{workdir}/config_written.yaml',
 
 
 
-sys.exit()
+# sys.exit()
 gta = GTAnalysis.create(roi_file_path, config=f'{workdir}/config_written.yaml')
 
 ### init janitor object
 
 j = Janitor(gta)
 
-
 ### actual fitting in loop over param_range
 
 for i in param_range:
-    prob = np.loadtxt(f'{prob_dir}/gm{i}_theta_225_B0_8.3_PA_-147.dat')
+    prob = np.loadtxt(f'{prob_dir}/gm_{i}_jansson12c.dat')
     # or load probs module at the beginning and generate on the fly
     print(prob.shape)
     j.p = prob #['''some indexing probably required''']
     j.fit()
     j.prepare_outdata()
     # saving procedure here
-    np.savetxt(f'structured_test/gm_{i}_old_prob.dat', j.outdata, fmt='%5.4f') 
+    np.savetxt(f'/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/structured_field/outdata/jansson12c/gm_{i}.dat', j.outdata, fmt='%5.4f')
+    best_dnde = j.gta.get_source_dnde(j.name)
+    np.savetxt(f'/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/structured_field/outdata/jansson12c_dnde/gm_{i}.dat', best_dnde)
     if time.time() - start_time > 10500:
         break
     else:
