@@ -52,7 +52,9 @@ like_save_path = f'{workdir}/loglike_H0_{input_arg}.dat'     # loglike of null h
 gta.free_sources(free=False)
 gta.simulate_roi()
 for j in range(5):
-    gta.optimize()
+    o = gta.optimize()
+    if np.abs(o['dloglike']) < 1:
+        break
 # print("loglike of saved roi", -gta.like())
 # gta.write_roi(f'sim_{input_arg}')
 gta.free_source(source)
