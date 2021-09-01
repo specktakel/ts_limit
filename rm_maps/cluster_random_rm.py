@@ -1,13 +1,10 @@
-from b_field import structured_field as s
 import numpy as np
 import numpy.ma as ma
 from scipy.integrate import simps
 from scipy.stats import norm
-from matplotlib import cm
 from gammaALPs.nel.icm import NelICM
 from gammaALPs.bfields.gauss import Bgaussian
 from gammaALPs.core import ModuleList, ALP, Source
-from scipy.spatial.transform import Rotation as R_
 import time
 
 
@@ -65,15 +62,16 @@ def make_rm_dist(x, y, B0, rm_num, z_steps, seed):
     rm = np.zeros(rm_num)
     for c_, B in enumerate(Bfield):
         rm[c_] = make_random_rm(x, y, z, B)
-    print(rm)
+    # print(rm)
+    np.savetxt(f'/nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/rm_maps/rm_cluster/rm_{x:2.1f}.dat', rm)
     pars = norm.fit(rm[1:])
     return pars[1]
 
-x = np.linspace(0, 500, num=50)
+
+start = int(sys.argv[1])
+
+x = np.arange(0, 501, step=5)
 sigma = np.zeros(x.shape)
-start = time.time()
-for c_, x_ in enumerate(x):
-    sigma[c_] = make_rm_dist(x_, 0, 10, 100, 5000, None)
+for c_, x_ in enumerate(x[start*10, (start+1)*10]):
+    sigma[c_] = make_rm_dist(x_, 0, 10, 1000, 5000, None)
     break
-end = time.time()
-print('elapsed time', end - start)
