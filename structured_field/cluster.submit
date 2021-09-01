@@ -1,13 +1,10 @@
+start                   = 0
 initialdir              = /nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/structured_field
 executable              = /nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/structured_field/bird.sh
-# transfer_executable     = true
-arguments               = $(which_roi)
-log                     = log/cluster_$(which_roi).log
-output                  = out/cluster_$(which_roi).out
-error                   = err/cluster_$(which_roi).err
-# log                     = roi_log/orig_data_opt/cluster194.log
-# error                   = roi_err/orig_data_opt/cluster194.err
-# output                  = roi_out/orig_data_opt/cluster194.out
+arguments               = $(start) $(roi)
+log                     = log/cluster_$(start)_$(roi).log
+output                  = out/cluster_$(start)_$(roi).out
+error                   = err/cluster_$(start)_$(roi).err
 should_transfer_files   = YES
 transfer_input_files    = events.lst
 when_to_transfer_output = ON_EXIT
@@ -15,11 +12,8 @@ transfer_output_files   = ""
 request_cpus            = 1
 request_disk            = 1GB
 request_memory          = 2GB
-# request_runtime         = 18000
-notification            = Always
+notification            = Error
 notify_user             = julian.kuhlmann@desy.de
-# materialize_max_idle    = 1000
-# materialize_max_idle    = 100
-# queue
-# queue gm from other_args.txt
-queue which_roi from submit_this.txt
+
+
+queue roi from missing_gm.txt

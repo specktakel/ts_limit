@@ -19,24 +19,31 @@ else
 fi
 unset __conda_setup
 
+### CLA:
+### $1: gm
+### $2: start of roi
 
-int=60
+### num is fixed to some integer
 
-
-# timer=$(($(($1 % $int ))*3))
-# timer=$(($1 % $int ))
-# echo "sleeping for $timer"
-# sleep $timer
-# sleep 60
 conda activate fermi3
 echo "which conda:"
 conda info --base
 echo "conda path"
 echo "$CONDA_PREFIX"
-echo "Copying needed files..."
-cp -r /nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/roi_simulation/roi_files/roi_$2 .
-# cp -r /nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/roi_simulation/roi_files/fits_01 .
+# simulates 5 data sets: saves them at correct directory, removes working directory and repeats
 
-echo "STARTING THE PYTHON SCRIPT with arguments:"
-echo $1 $2
-python /nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/structured_field/ts_cluster.py $1 $2 1
+
+number=5
+begin=$(($2 * $number))
+end=$(($(($2 + 1)) * $number))
+
+for ((i=$begin; i<$end; i+=1))
+do
+  echo "Copying needed files..."
+  cp -r /nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/roi_simulation/roi_files/fits_01 .
+  echo "STARTING THE PYTHON SCRIPT with argument:"
+  echo $1 $i
+  python /nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/structured_field/h1/simulate_roi.py $1 $i
+  cp -r ./fits_01 /nfs/astrop/n1/kuhlmann/NGC_1275/ts_limit/roi_simulation/roi_files/struc_h1/gm_$1/roi_$i
+  rm -r ./fits_01
+done

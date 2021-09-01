@@ -14,7 +14,7 @@ class structured_field():
     F_0 = (alpha * np.cos(alpha) - np.sin(alpha)) * alpha**2
     norm = np.sqrt((3 * F_0 + alpha**5)**2) * 2 / (3 * alpha**2)
 
-    def __init__(self, B_0, R, theta, radians=False, cell_num=100, **kwargs):
+    def __init__(self, B_0, R, theta, radians=False, cell_num=500, **kwargs):
         '''Norm in micro gauss, theta in degrees, if not specified.'''
         if radians:
             self.theta = theta
@@ -186,7 +186,7 @@ class structured_field():
     def rotation_measure(self, nel):
         '''Rotation measure (RM) = rad * m^-2 * 812 * integral nel * B dz,
         nel in 1/cm^3, B in muGauss, z in kpc.'''
-        return 812 * simps(self.b_par * nel, self.r)
+        return 812. * simps(self.b_par * nel, self.r)
 
 
 if __name__ == "__main__":
